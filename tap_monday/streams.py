@@ -58,7 +58,11 @@ class BoardsStream(MondayStream):
         for row in resp_json["data"]["boards"]:
             yield row
 
-# boards don't need to have state since the expectation is to grab all or specific ones
+    def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
+        row["id"] = int(row["id"])
+        return row
+
+# is it possible to get only "newly created" boards, what about renamed boards?
 # groups need to be grabbed by creation date, don't see any indicator in the API to help with that
 
 class GroupsStream(MondayStream):
@@ -78,12 +82,17 @@ class GroupsStream(MondayStream):
             }
         }
     """
+
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         resp_json = response.json()
         # print("GroupsStream resp_json")
         # print(resp_json)
         for row in resp_json["data"]["boards"][0]["groups"]:
             yield row
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
+        row["position"] = float(row["position"])
+        return row
 
 # class ItemsStream(MondayStream):
 #     name = "items"
