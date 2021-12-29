@@ -53,8 +53,8 @@ class BoardsStream(MondayStream):
     # }
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         resp_json = response.json()
-        print("BoardsStream resp_json")
-        print(resp_json)
+        # print("BoardsStream resp_json")
+        # print(resp_json)
         for row in resp_json["data"]["boards"]:
             yield row
 
@@ -80,8 +80,8 @@ class GroupsStream(MondayStream):
     """
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         resp_json = response.json()
-        print("GroupsStream resp_json")
-        print(resp_json)
+        # print("GroupsStream resp_json")
+        # print(resp_json)
         for row in resp_json["data"]["boards"][0]["groups"]:
             yield row
 

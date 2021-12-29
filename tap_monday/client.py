@@ -13,7 +13,7 @@ class MondayStream(GraphQLStream):
     @property
     def url_base(self) -> str:
         """Return the API URL root, configurable via tap settings."""
-        print(self.config["api_url"])
+        # print(self.config["api_url"])
         return self.config["api_url"]
 
     # Alternatively, use a static string for url_base:
@@ -22,7 +22,7 @@ class MondayStream(GraphQLStream):
     @property
     def http_headers(self) -> dict:
         headers = {}
-        print(self.config.get("auth_token"))
+        # print(self.config.get("auth_token"))
         headers["Authorization"] = self.config.get("auth_token")
         headers["Content-Type"]  = self.config.get("application/json")
         if "user_agent" in self.config:
@@ -33,8 +33,8 @@ class MondayStream(GraphQLStream):
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         resp_json = response.json()
-        print("MondayStream resp_json")
-        print(resp_json)
+        # print("MondayStream resp_json")
+        # print(resp_json)
         for row in resp_json["data"]:
             yield row
         # dry? parent.parse_response(..., depth: '[0]["groups"]')
