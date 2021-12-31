@@ -44,23 +44,24 @@ class MondayStream(GraphQLStream):
         # TODO: Delete this method if not needed.
         return row
 
-    @property
-    def query(self) -> str:
-        graphql_query="""
-            me {
-                id
-                name
-                email
-                is_admin
-                created_at
-                join_date
-                account {
-                    name
-                    id
-                }
-            }
-        """
-        return graphql_query
+    query = ""
+    # @property
+    # def query(self) -> str:
+    #     graphql_query="""
+    #         me {
+    #             id
+    #             name
+    #             email
+    #             is_admin
+    #             created_at
+    #             join_date
+    #             account {
+    #                 name
+    #                 id
+    #             }
+    #         }
+    #     """
+    #     return graphql_query
 
     # def validate_response(self, response):
     #     # Still catch error status codes

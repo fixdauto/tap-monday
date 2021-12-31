@@ -23,10 +23,9 @@ class BoardsStream(MondayStream):
         th.Property("description", th.StringType),
         # th.Property("__else__", None)
     ).to_dict()
-    # Example: {'data': {'boards': [{'name': 'Subitems of Influencer Projects', 'id': '2019183913', 'description': None}]}, 'account_id': 8634050}
+
     primary_keys = ["id"]
     replication_key = None # update date, DateTimeType
-    # graphql_query = ...
     query = """
         boards(limit: 3) {
                 name
@@ -51,6 +50,15 @@ class BoardsStream(MondayStream):
     #     }
     #   }
     # }
+
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        # print('get_child_context')
+        # print(f'context {context}')
+        # print(f'record id {record["id"]}')
+        return {
+            "board_id": record["id"],
+        }
+
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         resp_json = response.json()
         # print("BoardsStream resp_json")
@@ -73,15 +81,38 @@ class GroupsStream(MondayStream):
         th.Property("position", th.NumberType),
         # th.Property("__else__", None)
     ).to_dict()
-    query = """
-        boards(ids: 1554079540) {
-            groups() {
-                title
-                position
-                id
-            }
+
+    replication_key = None # update date, DateTimeType
+
+    parent_stream_type = BoardsStream
+    ignore_parent_replication_keys = True
+
+    # boards(ids: 1554079540) {
+    # print(f'requests: {requests}')
+    # print(f'context: {context}')
+    # print(f'board_id: {board_id}')
+    query = ""
+
+    def prepare_request_payload(self, context: Optional[dict], next_page_token: Optional[Any]) -> Optional[dict]:
+        query = f"""
+            boards(ids: {context["board_id"]}) {{
+                groups() {{
+                    title
+                    position
+                    id
+                }}
+            }}
+        """
+        # self.query = ...
+        # super().prepare_request_payload ... doesn't get new query value
+        query = "query { " + query + " }"
+        # query = query.lstrip()
+        request_data = {
+            "query": (" ".join([line.strip() for line in query.splitlines()])),
+            "variables": {},
         }
-    """
+        self.logger.debug(f"Attempting query:\n{query}")
+        return request_data
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         resp_json = response.json()
