@@ -14,25 +14,47 @@ SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
 # TODO: - Override `UsersStream` and `GroupsStream` with your own stream definition.
 #       - Copy-paste as many times as needed to create multiple stream types.
 
+# WorkspaceStream
+# not realy a query on it's own, maybe just add to boards table
+# query {
+#   boards {
+#     workspace {
+#       id
+#       name
+#       kind
+#       description
+#     }
+#   }
+# }
+#
 class BoardsStream(MondayStream):
     name = "boards"
-    # actually put in ./schemas since it's not dynamic
+    # put in ./schemas since it's not dynamic
     schema = th.PropertiesList(
         th.Property("name", th.StringType),
         th.Property("id", th.IntegerType),
         th.Property("description", th.StringType),
+        th.Property("state", th.StringType),
+        th.Property("updated_at", th.DateTimeType),
         # th.Property("__else__", None)
     ).to_dict()
 
     primary_keys = ["id"]
-    replication_key = None # update date, DateTimeType
-    query = """
-        boards(limit: 3) {
-                name
-                id
-                description
-            }
-    """
+    replication_key = "updated_at" # updated_at, DateTimeType, 2022-01-07T15:56:08Z
+
+    @property
+    def query(self) -> str:
+        """Return the API URL root, configurable via tap settings."""
+        # print(self.config["api_url"])
+        return f"""
+            boards(limit: {self.config.get("board_limit")}, order_by: created_at) {{
+                    name
+                    id
+                    description
+                    state
+                    updated_at
+                }}
+        """
     # More fields from https://api.developer.monday.com/docs/boards
     # updated_at ISO8601DateTime, singer needs RFC3339 2017-01-01T00:00:00Z
     # workspace_id
@@ -52,8 +74,7 @@ class BoardsStream(MondayStream):
     # }
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
-        # print('get_child_context')
-        # print(f'context {context}')
+        # print(f'get_child_context context {context}')
         # print(f'record id {record["id"]}')
         return {
             "board_id": record["id"],
@@ -70,27 +91,29 @@ class BoardsStream(MondayStream):
         row["id"] = int(row["id"])
         return row
 
+    # To paginate form query in prepare_request_payload and get_next_page_token
+    # Monday returns "boards:[]" when out of pages
+
 # is it possible to get only "newly created" boards, what about renamed boards?
 # groups need to be grabbed by creation date, don't see any indicator in the API to help with that
 
 class GroupsStream(MondayStream):
     name = "groups"
-    schema =  th.PropertiesList(
+    schema = th.PropertiesList(
         th.Property("title", th.StringType),
         th.Property("id", th.StringType),
         th.Property("position", th.NumberType),
+        th.Property("board_id", th.NumberType),
+        th.Property("color", th.StringType),
         # th.Property("__else__", None)
     ).to_dict()
 
+    primary_keys = ["id"]
     replication_key = None # update date, DateTimeType
 
     parent_stream_type = BoardsStream
     ignore_parent_replication_keys = True
 
-    # boards(ids: 1554079540) {
-    # print(f'requests: {requests}')
-    # print(f'context: {context}')
-    # print(f'board_id: {board_id}')
     query = ""
 
     def prepare_request_payload(self, context: Optional[dict], next_page_token: Optional[Any]) -> Optional[dict]:
@@ -100,6 +123,7 @@ class GroupsStream(MondayStream):
                     title
                     position
                     id
+                    color
                 }}
             }}
         """
@@ -123,6 +147,7 @@ class GroupsStream(MondayStream):
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         row["position"] = float(row["position"])
+        row["board_id"] = context["board_id"]
         return row
 
 # class ItemsStream(MondayStream):
