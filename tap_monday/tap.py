@@ -25,6 +25,7 @@ STREAM_TYPES = [
 
 class TapMonday(Tap):
     """Monday tap class."""
+
     name = "tap-monday"
 
     # TODO: Update this section with the actual config values you expect:

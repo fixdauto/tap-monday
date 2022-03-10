@@ -3,7 +3,7 @@
 import requests
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, List, Iterable
+from typing import Any, Dict, Optional, Union, List, Iterable, cast
 
 from singer_sdk import typing as th  # JSON Schema typing helpers
 
@@ -28,16 +28,18 @@ SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
 # }
 #
 class BoardsStream(MondayStream):
+    """Loads boards."""
+
     name = "boards"
     # put in ./schemas since it's not dynamic
-    schema = th.PropertiesList(
-        th.Property("name", th.StringType),
-        th.Property("id", th.IntegerType),
-        th.Property("description", th.StringType),
-        th.Property("state", th.StringType),
-        th.Property("updated_at", th.DateTimeType),
-        # th.Property("__else__", None)
-    ).to_dict()
+    # schema = th.PropertiesList(
+    #     th.Property("name", th.StringType),
+    #     th.Property("id", th.IntegerType),
+    #     th.Property("description", th.StringType),
+    #     th.Property("state", th.StringType),
+    #     th.Property("updated_at", th.DateTimeType),
+    # ).to_dict()
+    schema_filepath = SCHEMAS_DIR / "boards.json"
 
     primary_keys = ["id"]
     replication_key = "updated_at" # updated_at, DateTimeType, 2022-01-07T15:56:08Z
@@ -74,6 +76,7 @@ class BoardsStream(MondayStream):
     # }
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Allow GroupsStream to query by board_id."""
         # print(f'get_child_context context {context}')
         # print(f'record id {record["id"]}')
         return {
@@ -81,6 +84,7 @@ class BoardsStream(MondayStream):
         }
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Parse boards response."""
         resp_json = response.json()
         # print("BoardsStream resp_json")
         # print(resp_json)
@@ -88,7 +92,9 @@ class BoardsStream(MondayStream):
             yield row
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
+        """Convert types."""
         row["id"] = int(row["id"])
+        row["description"] = str(row["description"])
         return row
 
     # To paginate form query in prepare_request_payload and get_next_page_token
@@ -98,15 +104,17 @@ class BoardsStream(MondayStream):
 # groups need to be grabbed by creation date, don't see any indicator in the API to help with that
 
 class GroupsStream(MondayStream):
+    """Loads board groups."""
+
     name = "groups"
-    schema = th.PropertiesList(
-        th.Property("title", th.StringType),
-        th.Property("id", th.StringType),
-        th.Property("position", th.NumberType),
-        th.Property("board_id", th.NumberType),
-        th.Property("color", th.StringType),
-        # th.Property("__else__", None)
-    ).to_dict()
+    # schema = th.PropertiesList(
+    #     th.Property("title", th.StringType),
+    #     th.Property("id", th.StringType),
+    #     th.Property("position", th.NumberType),
+    #     th.Property("board_id", th.NumberType),
+    #     th.Property("color", th.StringType),
+    # ).to_dict()
+    schema_filepath = SCHEMAS_DIR / "groups.json"
 
     primary_keys = ["id"]
     replication_key = None # update date, DateTimeType
@@ -117,8 +125,10 @@ class GroupsStream(MondayStream):
     query = ""
 
     def prepare_request_payload(self, context: Optional[dict], next_page_token: Optional[Any]) -> Optional[dict]:
+        """Prepare custom query."""
+        ctx: dict = cast(dict, context)
         query = f"""
-            boards(ids: {context["board_id"]}) {{
+            boards(ids: {ctx["board_id"]}) {{
                 groups() {{
                     title
                     position
@@ -139,6 +149,7 @@ class GroupsStream(MondayStream):
         return request_data
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Parse groups response."""
         resp_json = response.json()
         # print("GroupsStream resp_json")
         # print(resp_json)
@@ -146,8 +157,10 @@ class GroupsStream(MondayStream):
             yield row
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
+        """Convert types."""
+        ctx: dict = cast(dict, context)
         row["position"] = float(row["position"])
-        row["board_id"] = context["board_id"]
+        row["board_id"] = ctx["board_id"]
         return row
 
 # class ItemsStream(MondayStream):

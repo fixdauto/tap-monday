@@ -21,6 +21,7 @@ class MondayStream(GraphQLStream):
 
     @property
     def http_headers(self) -> dict:
+        """Authorise requests."""
         headers = {}
         # print(self.config.get("auth_token"))
         headers["Authorization"] = self.config.get("auth_token")
@@ -32,6 +33,7 @@ class MondayStream(GraphQLStream):
         return headers
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Parese response. Default behavior."""
         resp_json = response.json()
         # print("MondayStream resp_json")
         # print(resp_json)
@@ -44,9 +46,11 @@ class MondayStream(GraphQLStream):
         # TODO: Delete this method if not needed.
         return row
 
-    query = ""
-    # @property
-    # def query(self) -> str:
+    # query = ""
+    @property
+    def query(self) -> str:
+        """Abstract method."""
+        return ""
     #     graphql_query="""
     #         me {
     #             id

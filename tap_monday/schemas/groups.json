@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "position": {
+      "type": "number"
+    },
+    "board_id": {
+      "type": "number"
+    },
+    "color": {
+      "type": "string"
+    }
+  }
+}
