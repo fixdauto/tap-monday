@@ -29,7 +29,6 @@ class TapMonday(Tap):
 
     name = "tap-monday"
 
-    # TODO: Update this section with the actual config values you expect:
     config_jsonschema = th.PropertiesList(
         th.Property(
             "auth_token",
@@ -37,22 +36,17 @@ class TapMonday(Tap):
             required=True,
             description="The token to authenticate against the API service",
         ),
-        # th.Property(
-        #     "project_ids",
-        #     th.ArrayType(th.StringType),
-        #     required=True,
-        #     description="Project IDs to replicate"
-        # ),
-        # th.Property(
-        #     "start_date",
-        #     th.DateTimeType,
-        #     description="The earliest record date to sync"
-        # ),
         th.Property(
             "api_url",
             th.StringType,
             default="https://api.mysample.com",
             description="The url for the API service",
+        ),
+        th.Property(
+            "board_limit",
+            th.NumberType,
+            default=10,
+            description="Amount of boards to request",
         ),
     ).to_dict()
 

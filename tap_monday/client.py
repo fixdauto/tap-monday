@@ -41,15 +41,13 @@ class MondayStream(GraphQLStream):
             yield row
         # dry? parent.parse_response(..., depth: '[0]["groups"]')
 
-    def post_process(
-        self,
-        row: dict,
-        context: Optional[dict] = None
-    ) -> dict:
+    # @abstract?
+    def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Abstract method."""
         return row
 
     # query = ""
+    # @abstract?
     @property
     def query(self) -> str:
         """Abstract method."""
