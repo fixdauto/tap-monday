@@ -1,8 +1,7 @@
 """GraphQL client handling, including MondayStream base class."""
 
 import requests
-from pathlib import Path
-from typing import Any, Dict, Optional, Union, List, Iterable
+from typing import Optional, Iterable
 
 from singer_sdk.streams import GraphQLStream
 
@@ -25,10 +24,11 @@ class MondayStream(GraphQLStream):
         headers = {}
         # print(self.config.get("auth_token"))
         headers["Authorization"] = self.config.get("auth_token")
-        headers["Content-Type"]  = self.config.get("application/json")
+        headers["Content-Type"] = self.config.get("application/json")
         if "user_agent" in self.config:
             headers["User-Agent"] = self.config.get("user_agent")
-        # If not using an authenticator, you may also provide inline auth headers:
+        # If not using an authenticator,
+        # you may also provide inline auth headers:
         # headers["Private-Token"] = self.config.get("auth_token")
         return headers
 
@@ -41,9 +41,12 @@ class MondayStream(GraphQLStream):
             yield row
         # dry? parent.parse_response(..., depth: '[0]["groups"]')
 
-    def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
-        """As needed, append or transform raw data to match expected structure."""
-        # TODO: Delete this method if not needed.
+    def post_process(
+        self,
+        row: dict,
+        context: Optional[dict] = None
+    ) -> dict:
+        """Abstract method."""
         return row
 
     # query = ""
@@ -51,6 +54,7 @@ class MondayStream(GraphQLStream):
     def query(self) -> str:
         """Abstract method."""
         return ""
+
     #     graphql_query="""
     #         me {
     #             id

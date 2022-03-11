@@ -3,16 +3,13 @@
 import requests
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, List, Iterable, cast
+from typing import Any, Optional, Iterable, cast
 
-from singer_sdk import typing as th  # JSON Schema typing helpers
+# from singer_sdk import typing as th  # JSON Schema typing helpers
 
 from tap_monday.client import MondayStream
 
-# TODO: Delete this is if not using json files for schema definition
 SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
-# TODO: - Override `UsersStream` and `GroupsStream` with your own stream definition.
-#       - Copy-paste as many times as needed to create multiple stream types.
 
 # WorkspaceStream
 # not realy a query on it's own, maybe just add to boards table
@@ -27,6 +24,8 @@ SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
 #   }
 # }
 #
+
+
 class BoardsStream(MondayStream):
     """Loads boards."""
 
@@ -42,21 +41,26 @@ class BoardsStream(MondayStream):
     schema_filepath = SCHEMAS_DIR / "boards.json"
 
     primary_keys = ["id"]
-    replication_key = "updated_at" # updated_at, DateTimeType, 2022-01-07T15:56:08Z
+    replication_key = "updated_at"
+    # updated_at, DateTimeType, 2022-01-07T15:56:08Z
 
     @property
     def query(self) -> str:
         """Return the API URL root, configurable via tap settings."""
         # print(self.config["api_url"])
         return f"""
-            boards(limit: {self.config.get("board_limit")}, order_by: created_at) {{
-                    name
-                    id
-                    description
-                    state
-                    updated_at
-                }}
+            boards(
+                limit: {self.config.get("board_limit")},
+                order_by: created_at
+            ) {{
+                name
+                id
+                description
+                state
+                updated_at
+            }}
         """
+
     # More fields from https://api.developer.monday.com/docs/boards
     # updated_at ISO8601DateTime, singer needs RFC3339 2017-01-01T00:00:00Z
     # workspace_id
@@ -100,8 +104,12 @@ class BoardsStream(MondayStream):
     # To paginate form query in prepare_request_payload and get_next_page_token
     # Monday returns "boards:[]" when out of pages
 
-# is it possible to get only "newly created" boards, what about renamed boards?
-# groups need to be grabbed by creation date, don't see any indicator in the API to help with that
+
+# is it possible to get only "newly created" boards,
+# what about renamed boards?
+# groups need to be grabbed by creation date,
+# don't see any indicator in the API to help with that
+
 
 class GroupsStream(MondayStream):
     """Loads board groups."""
@@ -117,14 +125,16 @@ class GroupsStream(MondayStream):
     schema_filepath = SCHEMAS_DIR / "groups.json"
 
     primary_keys = ["id"]
-    replication_key = None # update date, DateTimeType
+    replication_key = None  # update date, DateTimeType
 
     parent_stream_type = BoardsStream
     ignore_parent_replication_keys = True
 
     query = ""
 
-    def prepare_request_payload(self, context: Optional[dict], next_page_token: Optional[Any]) -> Optional[dict]:
+    def prepare_request_payload(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Optional[dict]:
         """Prepare custom query."""
         ctx: dict = cast(dict, context)
         query = f"""
@@ -162,6 +172,7 @@ class GroupsStream(MondayStream):
         row["position"] = float(row["position"])
         row["board_id"] = ctx["board_id"]
         return row
+
 
 # class ItemsStream(MondayStream):
 #     name = "items"
