@@ -41,16 +41,14 @@ class MondayStream(GraphQLStream):
             yield row
         # dry? parent.parse_response(..., depth: '[0]["groups"]')
 
-    # @abstract?
-    def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
-        """Abstract method."""
-        return row
+    # # @abstract?
+    # def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
+    #     """Abstract method."""
+    #     return row
 
-    # query = ""
-    # @abstract?
     @property
     def query(self) -> str:
-        """Abstract method."""
+        """Satisfy SDK complains. It's actually used only in child streams."""
         return ""
 
     #     graphql_query="""

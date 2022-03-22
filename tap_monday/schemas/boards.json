@@ -1,11 +1,11 @@
 {
   "type": "object",
   "properties": {
-    "name": {
-      "type": "string"
-    },
     "id": {
       "type": "integer"
+    },
+    "name": {
+      "type": "string"
     },
     "description": {
       "type": "string"
@@ -15,6 +15,22 @@
     },
     "updated_at": {
       "format": "date-time",
+      "type": "string"
+    },
+    "tapped_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "workspace_id": {
+      "type": "integer"
+    },
+    "workspace_name": {
+      "type": "string"
+    },
+    "workspace_kind": {
+      "type": "string"
+    },
+    "workspace_description": {
       "type": "string"
     }
   }

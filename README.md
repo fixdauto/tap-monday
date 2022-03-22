@@ -38,6 +38,11 @@ plugins:
       label: Maximum number of boards to return
       description: Usually accounts don't have that many boards to bother with pagination.
         Setting limit to high enough value returns all the boards anyway.
+    - name: item_limit
+      kind: integer
+      value: 1000
+      label: Maximum number of items to return
+      description: Usually Monday.com have more items than boards. Try a high value to see if you get all the items without pagination.
     select:
     - boards.name
     - boards.updated_at
@@ -59,9 +64,12 @@ meltano elt tap-monday your-target
 {
   "api_url": "https://api.monday.com/v2",
   "auth_token": "yourauthenticationtoken",
-  "board_limit": 10
+  "board_limit": 10,
+  "item_limit": 10
 }
 ```
+
+Meltano extractor configuration example is in `meltano.yml`
 
 ## Change
 
@@ -81,8 +89,8 @@ poetry run tap-monday --config ../tap-monday-config.json
 Test and lint before committing. It should pass MyPy, Black, Falke8 and PyDocStyle.
 ```
 poetry run pytest
-poetry run black --check tap_monday/
+poetry run mypy tap_monday
+poetry run black
 poetry run flake8 tap_monday
 poetry run pydocstyle tap_monday
-poetry run mypy tap_monday --exclude='tap_monday/tests'
 ```

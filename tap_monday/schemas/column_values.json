@@ -7,13 +7,16 @@
     "title": {
       "type": "string"
     },
-    "position": {
-      "type": "number"
+    "text": {
+      "type": "string"
     },
-    "board_id": {
-      "type": "number"
+    "type": {
+      "type": "string"
     },
-    "color": {
+    "value": {
+      "type": "string"
+    },
+    "additional_info": {
       "type": "string"
     },
     "tapped_at": {

@@ -2,6 +2,7 @@
 
 import requests
 
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, Iterable, cast
 
@@ -10,20 +11,6 @@ from typing import Any, Optional, Iterable, cast
 from tap_monday.client import MondayStream
 
 SCHEMAS_DIR = Path(__file__).parent / Path("./schemas")
-
-# WorkspaceStream
-# not realy a query on it's own, maybe just add to boards table
-# query {
-#   boards {
-#     workspace {
-#       id
-#       name
-#       kind
-#       description
-#     }
-#   }
-# }
-#
 
 
 class BoardsStream(MondayStream):
@@ -42,7 +29,7 @@ class BoardsStream(MondayStream):
 
     primary_keys = ["id"]
     replication_key = "updated_at"
-    # updated_at, DateTimeType, 2022-01-07T15:56:08Z
+    # updated_at, DateTimeType, ISO 8601 / RFC3339, 2022-01-07T15:56:08Z
 
     @property
     def query(self) -> str:
@@ -53,17 +40,20 @@ class BoardsStream(MondayStream):
                 limit: {self.config.get("board_limit")},
                 order_by: created_at
             ) {{
-                name
                 id
+                name
                 description
                 state
                 updated_at
+                workspace {{
+                    id
+                    name
+                    kind
+                    description
+                }}
             }}
         """
 
-    # More fields from https://api.developer.monday.com/docs/boards
-    # updated_at ISO8601DateTime, singer needs RFC3339 2017-01-01T00:00:00Z
-    # workspace_id
     # might be limited to 25, might need to pageInt and order_by: created_at
     # paginate - not clear total number of pages
     # or selected ids: boards(ids: [1, 2, 3]) { ... }
@@ -99,6 +89,16 @@ class BoardsStream(MondayStream):
         """Convert types."""
         row["id"] = int(row["id"])
         row["description"] = str(row["description"])
+        row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
+        row["board_id"] = row["id"]  # dry calling parent?
+        workspace = row["workspace"]
+        if (workspace is not None):
+            row["workspace_id"] = int(workspace["id"])
+            row["workspace_name"] = workspace["name"]
+        else:
+            row["workspace_id"] = 0
+            row["workspace_name"] = ""
+        del row["workspace"]
         return row
 
     # To paginate form query in prepare_request_payload and get_next_page_token
@@ -115,13 +115,6 @@ class GroupsStream(MondayStream):
     """Loads board groups."""
 
     name = "groups"
-    # schema = th.PropertiesList(
-    #     th.Property("title", th.StringType),
-    #     th.Property("id", th.StringType),
-    #     th.Property("position", th.NumberType),
-    #     th.Property("board_id", th.NumberType),
-    #     th.Property("color", th.StringType),
-    # ).to_dict()
     schema_filepath = SCHEMAS_DIR / "groups.json"
 
     primary_keys = ["id"]
@@ -140,9 +133,9 @@ class GroupsStream(MondayStream):
         query = f"""
             boards(ids: {ctx["board_id"]}) {{
                 groups() {{
+                    id
                     title
                     position
-                    id
                     color
                 }}
             }}
@@ -171,6 +164,8 @@ class GroupsStream(MondayStream):
         ctx: dict = cast(dict, context)
         row["position"] = float(row["position"])
         row["board_id"] = ctx["board_id"]
+        row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
+        row["group_id"] = row["id"]
         return row
 
 
@@ -182,6 +177,84 @@ class GroupsStream(MondayStream):
 #         th.Property("position", th.NumberType)
 #     ).to_dict()
 
+class ItemsStream(MondayStream):
+    """Loads items."""
+
+    name = "items"
+    schema_filepath = SCHEMAS_DIR / "items.json"
+
+    primary_keys = ["id"]
+    replication_key = "updated_at"
+
+    # query = ""
+
+    def prepare_request_payload(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Optional[dict]:
+        """Prepare custom query."""
+        ctx: dict = cast(dict, context)
+        query = f"""
+            items(limit: {self.config.get("item_limit")}) {{
+                id
+                name
+                state
+                created_at
+                updated_at
+                creator_id
+                creator {{
+                    email
+                    name
+                }}
+                board {{
+                    id
+                    name
+                }}
+                group {{
+                    id
+                    title
+                }}
+            }}
+        """
+
+        # self.query = ...
+        # super().prepare_request_payload ... doesn't get new query value
+        query = "query { " + query + " }"
+        # query = query.lstrip()
+        request_data = {
+            "query": (" ".join([line.strip() for line in query.splitlines()])),
+            "variables": {},
+        }
+        self.logger.info(f"Attempting query:\n{query}")
+        return request_data
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Parse items response."""
+        resp_json = response.json()
+        # print("ItemsStream resp_json")
+        # print(resp_json)
+        for row in resp_json["data"]["items"]:
+            yield row
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
+        """Add and convert fields."""
+        row["id"] = int(row["id"])
+        row["creator_id"] = int(row["creator_id"])
+        board = row.pop("board")
+        row["board_id"] = int(board["id"])
+        row["board_name"] = board["name"]
+        group = row.pop("group")
+        row["group_id"] = group["id"]
+        row["group_title"] = group["title"]
+        creator = row.pop("creator")
+        if (creator is not None):
+            row["creator_email"] = creator["email"]
+            row["creator_name"] = creator["name"]
+        else:
+            row["creator_email"] = ""
+            row["creator_name"] = ""
+        row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
+        return row
+
 # class ColumnValuesStream(MondayStream):
 #     name = "comlumn_values"
 #     schema =  th.PropertiesList(
@@ -190,74 +263,4 @@ class GroupsStream(MondayStream):
 #         th.Property("position", th.NumberType)
 #     ).to_dict()
 
-# class UsersStream(MondayStream):
-#     """Define custom stream."""
-#     name = "users"
-#     # Optionally, you may also use `schema_filepath` in place of `schema`:
-#     # schema_filepath = SCHEMAS_DIR / "users.json"
-#     schema = th.PropertiesList(
-#         th.Property("name", th.StringType),
-#         th.Property(
-#             "id",
-#             th.StringType,
-#             description="The user's system ID"
-#         ),
-#         th.Property(
-#             "age",
-#             th.IntegerType,
-#             description="The user's age in years"
-#         ),
-#         th.Property(
-#             "email",
-#             th.StringType,
-#             description="The user's email address"
-#         ),
-#         th.Property(
-#             "address",
-#             th.ObjectType(
-#                 th.Property("street", th.StringType),
-#                 th.Property("city", th.StringType),
-#                 th.Property(
-#                     "state",
-#                     th.StringType,
-#                     description="State name in ISO 3166-2 format"
-#                 ),
-#                 th.Property("zip", th.StringType),
-#             )
-#         ),
-#     ).to_dict()
-#     primary_keys = ["id"]
-#     replication_key = None
-#     graphql_query = """
-#         users {
-#             name
-#             id
-#             age
-#             email
-#             address {
-#                 street
-#                 city
-#                 state
-#                 zip
-#             }
-#         }
-#         """
 
-
-# class GroupsStream(MondayStream):
-#     """Define custom stream."""
-#     name = "groups"
-#     schema = th.PropertiesList(
-#         th.Property("name", th.StringType),
-#         th.Property("id", th.StringType),
-#         th.Property("modified", th.DateTimeType),
-#     ).to_dict()
-#     primary_keys = ["id"]
-#     replication_key = "modified"
-#     graphql_query = """
-#         groups {
-#             name
-#             id
-#             modified
-#         }
-#         """

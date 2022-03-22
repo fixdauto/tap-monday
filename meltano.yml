@@ -1,27 +1,39 @@
-version: 1
-send_anonymous_usage_stats: true
-project_id: tap-monday
 plugins:
   extractors:
   - name: tap-monday
     namespace: tap_monday
-    # TODO: To test using Meltano, replace with absolute path
-    #       to the tap-monday.sh script:
-    executable: ./tap-monday.sh
+    # pip_url: git+https://github.com/fixdauto/tap-monday.git
+    pip_url: /home/fixd/fixdapps/tap-monday
+    executable: tap-monday
     capabilities:
+    - discover
     - state
     - catalog
-    - discover
-    config:
-      start_date: '2010-01-01T00:00:00Z'
     settings:
-    # TODO: To configure using Meltano, declare settings and their types here:
-    - name: username
-    - name: password
+    - name: auth_token
+      env: MONDAY_AUTH_TOKEN
       kind: password
-    - name: start_date
-      value: '2010-01-01T00:00:00Z'
-  loaders:
-  - name: target-jsonl
-    variant: andyh1203
-    pip_url: target-jsonl
+      label: Authentication Token
+      documentation: https://support.monday.com/hc/en-us/articles/360005144659-Does-monday-com-have-an-API-
+      decription: Authentication token you should generate in your monday.com acccunt.
+        Look under Admin setting.
+    - name: api_url
+      kind: string
+      value: https://api.monday.com/v2
+      label: Monday.com web-API endpoint
+      description: Monday.com web-API endpoint URL
+    - name: board_limit
+      kind: integer
+      value: 1000
+      label: Maximum number of boards to return
+      description: Usually accounts don't have that many boards to bother with pagination.
+        Setting limit to high enough value returns all the boards anyway.
+    # state: tap-monday.state.json
+    # select:
+    # - boards.name
+    # - boards.updated_at
+    # - tags.*
+    metadata:
+      boards:
+        replication-method: INCREMENTAL
+        replication-key: updated_at

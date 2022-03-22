@@ -7,10 +7,9 @@ from singer_sdk import typing as th  # JSON schema typing helpers
 
 # TODO: Import your custom stream types here:
 from tap_monday.streams import (
-    # MondayStream,
     BoardsStream,
     GroupsStream,
-    # ItemsStream,
+    ItemsStream,
     # ColumnValuesStream,
 )
 
@@ -19,7 +18,7 @@ from tap_monday.streams import (
 STREAM_TYPES = [
     BoardsStream,
     GroupsStream,
-    # ItemsStream,
+    ItemsStream,
     # ColumnValuesStream,
 ]
 

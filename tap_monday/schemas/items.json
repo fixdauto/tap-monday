@@ -1,0 +1,47 @@
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "name": {
+      "type": "string"
+    },
+    "creator_id": {
+      "type": "integer"
+    },
+    "creator_email": {
+      "type": "string"
+    },
+    "creator_name": {
+      "type": "string"
+    },
+    "group_id": {
+      "type": "string"
+    },
+    "group_title": {
+      "type": "string"
+    },
+    "board_id": {
+      "type": "integer"
+    },
+    "board_name": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "tapped_at": {
+      "format": "date-time",
+      "type": "string"
+    }
+  }
+}
