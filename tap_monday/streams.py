@@ -1,6 +1,7 @@
 """Stream type classes for tap-monday."""
 
 import requests
+import json
 
 from datetime import datetime, timezone
 from pathlib import Path
@@ -306,6 +307,7 @@ class ColumnsStream(MondayStream):
             row["width"] = 0
         else:
             row["width"] = int(row["width"])
+        row["description"] = str(row["description"] )
         row["board_id"] = ctx["board_id"]
         row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
         return row
@@ -366,5 +368,14 @@ class ColumnValuesStream(MondayStream):
         """Convert types."""
         ctx: dict = cast(dict, context)
         row["item_id"] = ctx["item_id"]
+        if(row["value"] is None):
+            row["value"] = ""
+        else:
+            row["value"] = json.dumps(row["value"])
+        if(row["additional_info"] is None):
+            row["additional_info"] = ""
+        else:
+            row["additional_info"] = json.dumps(row["additional_info"])
+        row["text"] = str(row["text"])
         row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
         return row

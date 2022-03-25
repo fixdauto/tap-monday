@@ -14,10 +14,10 @@
       "type": "string"
     },
     "value": {
-      "type": "object"
+      "type": "string"
     },
     "additional_info": {
-      "type": "object"
+      "type": "string"
     },
     "item_id": {
       "type": "integer"
