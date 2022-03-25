@@ -7,19 +7,22 @@
     "title": {
       "type": "string"
     },
-    "text": {
+    "archived": {
+      "type": "boolean"
+    },
+    "settings_str": {
+      "type": "string"
+    },
+    "description": {
       "type": "string"
     },
     "type": {
       "type": "string"
     },
-    "value": {
-      "type": "object"
+    "width": {
+      "type": "integer"
     },
-    "additional_info": {
-      "type": "object"
-    },
-    "item_id": {
+    "board_id": {
       "type": "integer"
     },
     "tapped_at": {

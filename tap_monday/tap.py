@@ -10,7 +10,8 @@ from tap_monday.streams import (
     BoardsStream,
     GroupsStream,
     ItemsStream,
-    # ColumnValuesStream,
+    ColumnsStream,
+    ColumnValuesStream,
 )
 
 # TODO: Compile a list of custom stream types here
@@ -19,7 +20,8 @@ STREAM_TYPES = [
     BoardsStream,
     GroupsStream,
     ItemsStream,
-    # ColumnValuesStream,
+    ColumnsStream,
+    ColumnValuesStream,
 ]
 
 

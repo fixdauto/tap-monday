@@ -104,13 +104,6 @@ class BoardsStream(MondayStream):
     # To paginate form query in prepare_request_payload and get_next_page_token
     # Monday returns "boards:[]" when out of pages
 
-
-# is it possible to get only "newly created" boards,
-# what about renamed boards?
-# groups need to be grabbed by creation date,
-# don't see any indicator in the API to help with that
-
-
 class GroupsStream(MondayStream):
     """Loads board groups."""
 
@@ -118,7 +111,7 @@ class GroupsStream(MondayStream):
     schema_filepath = SCHEMAS_DIR / "groups.json"
 
     primary_keys = ["id"]
-    replication_key = None  # update date, DateTimeType
+    replication_key = None
 
     parent_stream_type = BoardsStream
     ignore_parent_replication_keys = True
@@ -167,15 +160,6 @@ class GroupsStream(MondayStream):
         row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
         row["group_id"] = row["id"]
         return row
-
-
-# class ItemsStream(MondayStream):
-#     name = "items"
-#     schema =  th.PropertiesList(
-#         th.Property("title", th.StringType),
-#         th.Property("id", th.StringType),
-#         th.Property("position", th.NumberType)
-#     ).to_dict()
 
 class ItemsStream(MondayStream):
     """Loads items."""
@@ -227,6 +211,14 @@ class ItemsStream(MondayStream):
         self.logger.info(f"Attempting query:\n{query}")
         return request_data
 
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Allow ColumnValuesStream to query by item_id."""
+        # print(f'get_child_context context {context}')
+        # print(f'record id {record["id"]}')
+        return {
+            "item_id": record["id"],
+        }
+
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse items response."""
         resp_json = response.json()
@@ -255,12 +247,124 @@ class ItemsStream(MondayStream):
         row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
         return row
 
-# class ColumnValuesStream(MondayStream):
-#     name = "comlumn_values"
-#     schema =  th.PropertiesList(
-#         th.Property("title", th.StringType),
-#         th.Property("id", th.StringType),
-#         th.Property("position", th.NumberType)
-#     ).to_dict()
+class ColumnsStream(MondayStream):
+    """Loads columns."""
 
+    name = "columns"
+    schema_filepath = SCHEMAS_DIR / "columns.json"
 
+    primary_keys = ["id"]
+    replication_key = None  # update date, DateTimeType
+
+    parent_stream_type = BoardsStream
+    ignore_parent_replication_keys = True
+
+    # query = ""
+
+    def prepare_request_payload(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Optional[dict]:
+        """Prepare custom query."""
+        ctx: dict = cast(dict, context)
+        query = f"""
+            boards(ids: {ctx["board_id"]}) {{
+                columns {{
+                    id
+                    title
+                    archived
+                    settings_str
+                    description
+                    type
+                    width
+                }}
+            }}
+        """
+
+        # self.query = ...
+        # super().prepare_request_payload ... doesn't get new query value
+        query = "query { " + query + " }"
+        # query = query.lstrip()
+        request_data = {
+            "query": (" ".join([line.strip() for line in query.splitlines()])),
+            "variables": {},
+        }
+        self.logger.debug(f"Attempting query:\n{query}")
+        return request_data
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Parse groups response."""
+        resp_json = response.json()
+        # print("ColumnsStream resp_json")
+        # print(resp_json)
+        for row in resp_json["data"]["boards"][0]["columns"]:
+            yield row
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
+        """Convert types."""
+        ctx: dict = cast(dict, context)
+        if (row["width"] is None):
+            row["width"] = 0
+        else:
+            row["width"] = int(row["width"])
+        row["board_id"] = ctx["board_id"]
+        row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
+        return row
+
+class ColumnValuesStream(MondayStream):
+    """Loads column values."""
+
+    name = "column_values"
+    schema_filepath = SCHEMAS_DIR / "column_values.json"
+
+    primary_keys = ["id"]
+    replication_key = None
+
+    parent_stream_type = ItemsStream
+    ignore_parent_replication_keys = True
+
+    # query = ""
+
+    def prepare_request_payload(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Optional[dict]:
+        """Prepare custom query."""
+        ctx: dict = cast(dict, context)
+        query = f"""
+            items(ids: {ctx["item_id"]}) {{
+                column_values {{
+                    id
+                    title
+                    text
+                    type
+                    value
+                    type
+                    additional_info
+                }}
+            }}
+        """
+
+        # self.query = ...
+        # super().prepare_request_payload ... doesn't get new query value
+        query = "query { " + query + " }"
+        # query = query.lstrip()
+        request_data = {
+            "query": (" ".join([line.strip() for line in query.splitlines()])),
+            "variables": {},
+        }
+        self.logger.debug(f"Attempting query:\n{query}")
+        return request_data
+
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Parse groups response."""
+        resp_json = response.json()
+        # print("ColumnValuesStream resp_json")
+        # print(resp_json)
+        for row in resp_json["data"]["items"][0]["column_values"]:
+            yield row
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
+        """Convert types."""
+        ctx: dict = cast(dict, context)
+        row["item_id"] = ctx["item_id"]
+        row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
+        return row
