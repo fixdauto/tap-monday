@@ -13,6 +13,15 @@
     "state": {
       "type": "string"
     },
+    "owner_id": {
+      "type": "integer"
+    },
+    "owner_name": {
+      "type": "string"
+    },
+    "owner_email": {
+      "type": "string"
+    },
     "updated_at": {
       "format": "date-time",
       "type": "string"

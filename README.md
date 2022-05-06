@@ -71,7 +71,7 @@ meltano elt tap-monday your-target
 
 Meltano extractor configuration example is in `meltano.yml`
 
-## Change
+## When you change the code
 
 Setup
 ```
@@ -94,3 +94,9 @@ poetry run black
 poetry run flake8 tap_monday
 poetry run pydocstyle tap_monday
 ```
+
+## Limitations
+
+Monday.com API in most cases doesn't have record timestamps neither a way to query by timestamps. So full dataset is being queried on every run.
+
+The tap adds tapped_at field so it's easier to track down the line (in Meltano) when records were added or updated.

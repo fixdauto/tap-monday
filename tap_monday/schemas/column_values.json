@@ -19,6 +19,9 @@
     "additional_info": {
       "type": "string"
     },
+    "board_id": {
+      "type": "integer"
+    },
     "item_id": {
       "type": "integer"
     },

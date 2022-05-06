@@ -16,6 +16,12 @@
     "color": {
       "type": "string"
     },
+    "archived": {
+      "type": "boolean"
+    },
+    "deleted": {
+      "type": "boolean"
+    },
     "tapped_at": {
       "format": "date-time",
       "type": "string"

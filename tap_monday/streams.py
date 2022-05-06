@@ -5,9 +5,7 @@ import json
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional, Iterable, cast
-
-# from singer_sdk import typing as th  # JSON Schema typing helpers
+from typing import Any, Optional, Dict, Iterable, cast
 
 from tap_monday.client import MondayStream
 
@@ -18,16 +16,7 @@ class BoardsStream(MondayStream):
     """Loads boards."""
 
     name = "boards"
-    # put in ./schemas since it's not dynamic
-    # schema = th.PropertiesList(
-    #     th.Property("name", th.StringType),
-    #     th.Property("id", th.IntegerType),
-    #     th.Property("description", th.StringType),
-    #     th.Property("state", th.StringType),
-    #     th.Property("updated_at", th.DateTimeType),
-    # ).to_dict()
     schema_filepath = SCHEMAS_DIR / "boards.json"
-
     primary_keys = ["id"]
     replication_key = "updated_at"
     # updated_at, DateTimeType, ISO 8601 / RFC3339, 2022-01-07T15:56:08Z
@@ -35,7 +24,6 @@ class BoardsStream(MondayStream):
     @property
     def query(self) -> str:
         """Return the API URL root, configurable via tap settings."""
-        # print(self.config["api_url"])
         return f"""
             boards(
                 limit: {self.config.get("board_limit")},
@@ -52,28 +40,16 @@ class BoardsStream(MondayStream):
                     kind
                     description
                 }}
+                owner {{
+                    id
+                    name
+                    email
+                }}
             }}
         """
 
-    # might be limited to 25, might need to pageInt and order_by: created_at
-    # paginate - not clear total number of pages
-    # or selected ids: boards(ids: [1, 2, 3]) { ... }
-    # state.json for partial extraction, after specific date if possible
-    # query {
-    #   boards {
-    #     workspace {
-    #       id
-    #       name
-    #       kind
-    #       description
-    #     }
-    #   }
-    # }
-
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Allow GroupsStream to query by board_id."""
-        # print(f'get_child_context context {context}')
-        # print(f'record id {record["id"]}')
         return {
             "board_id": record["id"],
         }
@@ -81,8 +57,7 @@ class BoardsStream(MondayStream):
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse boards response."""
         resp_json = response.json()
-        # print("BoardsStream resp_json")
-        # print(resp_json)
+        self.logger.info("MAKSIM >>>> boards response size:\n%s" % len(resp_json["data"]["boards"]))
         for row in resp_json["data"]["boards"]:
             yield row
 
@@ -93,6 +68,7 @@ class BoardsStream(MondayStream):
         row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
         row["board_id"] = row["id"]  # dry calling parent?
         workspace = row["workspace"]
+
         if (workspace is not None):
             row["workspace_id"] = int(workspace["id"])
             row["workspace_name"] = workspace["name"]
@@ -100,10 +76,13 @@ class BoardsStream(MondayStream):
             row["workspace_id"] = 0
             row["workspace_name"] = ""
         del row["workspace"]
-        return row
 
-    # To paginate form query in prepare_request_payload and get_next_page_token
-    # Monday returns "boards:[]" when out of pages
+        owner = row.pop("owner")
+        row["owner_id"] = owner["id"]
+        row["owner_name"] = owner["name"]
+        row["owner_email"] = owner["email"]
+
+        return row
 
 class GroupsStream(MondayStream):
     """Loads board groups."""
@@ -117,7 +96,7 @@ class GroupsStream(MondayStream):
     parent_stream_type = BoardsStream
     ignore_parent_replication_keys = True
 
-    query = ""
+    # query = ""
 
     def prepare_request_payload(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -134,10 +113,11 @@ class GroupsStream(MondayStream):
                 }}
             }}
         """
-        # self.query = ...
-        # super().prepare_request_payload ... doesn't get new query value
+
+        # Using partially `super().prepare_request_payload` code
+        # Can't simply set query=... because `context` is not available in the class,
+        # only passed into `prepare_request_payload`
         query = "query { " + query + " }"
-        # query = query.lstrip()
         request_data = {
             "query": (" ".join([line.strip() for line in query.splitlines()])),
             "variables": {},
@@ -148,10 +128,11 @@ class GroupsStream(MondayStream):
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse groups response."""
         resp_json = response.json()
-        # print("GroupsStream resp_json")
-        # print(resp_json)
-        for row in resp_json["data"]["boards"][0]["groups"]:
-            yield row
+        self.logger.info("MAKSIM >>>> groups response size:\n%s" % len(resp_json["data"]["boards"]))
+        for row in resp_json["data"]["boards"]:
+            self.logger.info(f"MAKSIM >>>> groups in board response size:\n{len(row)}")
+            for group in row["groups"]:
+                yield group
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Convert types."""
@@ -167,11 +148,8 @@ class ItemsStream(MondayStream):
 
     name = "items"
     schema_filepath = SCHEMAS_DIR / "items.json"
-
     primary_keys = ["id"]
     replication_key = "updated_at"
-
-    # query = ""
 
     def prepare_request_payload(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -198,13 +176,14 @@ class ItemsStream(MondayStream):
                     id
                     title
                 }}
+                parent_item {{
+                    id
+                }}
             }}
         """
 
-        # self.query = ...
-        # super().prepare_request_payload ... doesn't get new query value
+        # DRY
         query = "query { " + query + " }"
-        # query = query.lstrip()
         request_data = {
             "query": (" ".join([line.strip() for line in query.splitlines()])),
             "variables": {},
@@ -214,8 +193,6 @@ class ItemsStream(MondayStream):
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Allow ColumnValuesStream to query by item_id."""
-        # print(f'get_child_context context {context}')
-        # print(f'record id {record["id"]}')
         return {
             "item_id": record["id"],
         }
@@ -223,8 +200,7 @@ class ItemsStream(MondayStream):
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse items response."""
         resp_json = response.json()
-        # print("ItemsStream resp_json")
-        # print(resp_json)
+        self.logger.info("MAKSIM >>>> items response size:\n%s" % len(resp_json["data"]["items"]))
         for row in resp_json["data"]["items"]:
             yield row
 
@@ -232,12 +208,18 @@ class ItemsStream(MondayStream):
         """Add and convert fields."""
         row["id"] = int(row["id"])
         row["creator_id"] = int(row["creator_id"])
+
         board = row.pop("board")
         row["board_id"] = int(board["id"])
         row["board_name"] = board["name"]
+
         group = row.pop("group")
         row["group_id"] = group["id"]
         row["group_title"] = group["title"]
+
+        parent_item = row.pop("parent_item")
+        row["parent_item_id"] = 0 if parent_item is None else int(parent_item["id"])
+
         creator = row.pop("creator")
         if (creator is not None):
             row["creator_email"] = creator["email"]
@@ -245,6 +227,7 @@ class ItemsStream(MondayStream):
         else:
             row["creator_email"] = ""
             row["creator_name"] = ""
+
         row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
         return row
 
@@ -255,61 +238,89 @@ class ColumnsStream(MondayStream):
     schema_filepath = SCHEMAS_DIR / "columns.json"
 
     primary_keys = ["id"]
-    replication_key = None  # update date, DateTimeType
+    replication_key = None
 
     parent_stream_type = BoardsStream
     ignore_parent_replication_keys = True
 
     # query = ""
 
-    def prepare_request_payload(
+    def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Optional[dict]:
-        """Prepare custom query."""
-        ctx: dict = cast(dict, context)
-        query = f"""
-            boards(ids: {ctx["board_id"]}) {{
-                columns {{
-                    id
-                    title
-                    archived
-                    settings_str
-                    description
-                    type
-                    width
-                }}
-            }}
+    ) -> Dict[str, Any]:
+        return {
+            "board_id": context["board_id"],
+        }
+
+    @property
+    def query(self) -> str:
+        return """
+            query ($board_id: [Int]) {
+                boards(ids: $board_id) {
+                    columns {
+                        id
+                        title
+                        archived
+                        settings_str
+                        description
+                        type
+                        width
+                    }    
+                }
+            }
         """
 
-        # self.query = ...
-        # super().prepare_request_payload ... doesn't get new query value
-        query = "query { " + query + " }"
-        # query = query.lstrip()
-        request_data = {
-            "query": (" ".join([line.strip() for line in query.splitlines()])),
-            "variables": {},
-        }
-        self.logger.debug(f"Attempting query:\n{query}")
-        return request_data
+    # def prepare_request_payload(
+    #     self, context: Optional[dict], next_page_token: Optional[Any]
+    # ) -> Optional[dict]:
+    #     """Prepare custom query."""
+    #     ctx: dict = cast(dict, context)
+    #     query = f"""
+    #         boards(ids: {ctx["board_id"]}) {{
+    #             columns {{
+    #                 id
+    #                 title
+    #                 archived
+    #                 settings_str
+    #                 description
+    #                 type
+    #                 width
+    #             }}
+    #         }}
+    #     """
+
+    #     # DRY
+    #     query = "query { " + query + " }"
+    #     request_data = {
+    #         "query": (" ".join([line.strip() for line in query.splitlines()])),
+    #         "variables": {},
+    #     }
+    #     self.logger.debug(f"Attempting query:\n{query}")
+    #     return request_data
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse groups response."""
         resp_json = response.json()
-        # print("ColumnsStream resp_json")
-        # print(resp_json)
-        for row in resp_json["data"]["boards"][0]["columns"]:
-            yield row
+        self.logger.info("MAKSIM >>>> columns response size:\n%s" % len(resp_json["data"]["boards"]))
+        for row in resp_json["data"]["boards"]:
+            self.logger.info(f"MAKSIM >>>> columns for board response size:\n{len(row)}")
+            for column in row["columns"]:
+                yield column
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Convert types."""
         ctx: dict = cast(dict, context)
+        row["board_id"] = ctx["board_id"]
+        row["id"] = str(row["board_id"]) + "_" + row["id"]
+
         if (row["width"] is None):
             row["width"] = 0
         else:
             row["width"] = int(row["width"])
+
         row["description"] = str(row["description"] )
-        row["board_id"] = ctx["board_id"]
         row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
+
         return row
 
 class ColumnValuesStream(MondayStream):
@@ -321,61 +332,94 @@ class ColumnValuesStream(MondayStream):
     primary_keys = ["id"]
     replication_key = None
 
-    parent_stream_type = ItemsStream
-    ignore_parent_replication_keys = True
+    # parent_stream_type = ItemsStream
+    # ignore_parent_replication_keys = True
 
-    # query = ""
-
-    def prepare_request_payload(
+    def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Optional[dict]:
-        """Prepare custom query."""
-        ctx: dict = cast(dict, context)
-        query = f"""
-            items(ids: {ctx["item_id"]}) {{
-                column_values {{
+    ) -> Dict[str, Any]:
+        return {
+            "board_limit": self.config.get("board_limit")
+        }
+
+    @property
+    def query(self) -> str:
+        return """
+            query ($board_limit: Int!) {
+                boards(limit: $board_limit, order_by: created_at) {
                     id
-                    title
-                    text
-                    type
-                    value
-                    type
-                    additional_info
-                }}
-            }}
+                    items {
+                        id
+                        column_values {
+                            id
+                            title
+                            text
+                            type
+                            value
+                            additional_info
+                        }
+                    }
+                }
+            }
         """
 
-        # self.query = ...
-        # super().prepare_request_payload ... doesn't get new query value
-        query = "query { " + query + " }"
-        # query = query.lstrip()
-        request_data = {
-            "query": (" ".join([line.strip() for line in query.splitlines()])),
-            "variables": {},
-        }
-        self.logger.debug(f"Attempting query:\n{query}")
-        return request_data
+    # def prepare_request_payload(
+    #     self, context: Optional[dict], next_page_token: Optional[Any]
+    # ) -> Optional[dict]:
+    #     """Prepare custom query."""
+    #     ctx: dict = cast(dict, context)
+    #     query = f"""
+    #         items(ids: {ctx["item_id"]}) {{
+    #             column_values {{
+    #                 id
+    #                 title
+    #                 text
+    #                 value
+    #                 type
+    #                 additional_info
+    #             }}
+    #         }}
+    #     """
+
+    #     # DRY
+    #     query = "query { " + query + " }"
+    #     request_data = {
+    #         "query": (" ".join([line.strip() for line in query.splitlines()])),
+    #         "variables": {},
+    #     }
+    #     self.logger.debug(f"Attempting query:\n{query}")
+    #     return request_data
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse groups response."""
         resp_json = response.json()
-        # print("ColumnValuesStream resp_json")
-        # print(resp_json)
-        for row in resp_json["data"]["items"][0]["column_values"]:
-            yield row
+        self.logger.info("MAKSIM >>>> column values response size:\n%s" % len(resp_json["data"]["boards"]))
+        for row in resp_json["data"]["boards"]:
+            self.logger.info(f"MAKSIM >>>> column values for board response size:\n{len(row)}")
+            for item in row["items"]:
+                self.logger.info(f"MAKSIM >>>> column values for item response size:\n{len(row)}")
+                for column_value in item["column_values"]:
+                    column_value["board_id"] = row["id"]
+                    column_value["item_id"] = item["id"]
+                    column_value["id"] = row["id"] + "_" + item["id"] + "_" + column_value["id"]
+                    yield column_value
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Convert types."""
-        ctx: dict = cast(dict, context)
-        row["item_id"] = ctx["item_id"]
+        # ctx: dict = cast(dict, context)
+        # row["item_id"] = ctx["item_id"]
+        # row["id"] = str(row["item_id"]) + "_" + row["id"]
+
         if(row["value"] is None):
             row["value"] = ""
         else:
             row["value"] = json.dumps(row["value"])
+
         if(row["additional_info"] is None):
             row["additional_info"] = ""
         else:
             row["additional_info"] = json.dumps(row["additional_info"])
+
         row["text"] = str(row["text"])
         row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
         return row

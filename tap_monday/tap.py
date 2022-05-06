@@ -5,7 +5,6 @@ from typing import List
 from singer_sdk import Tap, Stream
 from singer_sdk import typing as th  # JSON schema typing helpers
 
-# TODO: Import your custom stream types here:
 from tap_monday.streams import (
     BoardsStream,
     GroupsStream,
@@ -14,8 +13,6 @@ from tap_monday.streams import (
     ColumnValuesStream,
 )
 
-# TODO: Compile a list of custom stream types here
-#       OR rewrite discover_streams() below with your custom logic.
 STREAM_TYPES = [
     BoardsStream,
     GroupsStream,
@@ -48,6 +45,12 @@ class TapMonday(Tap):
             th.NumberType,
             default=10,
             description="Amount of boards to request",
+        ),
+        th.Property(
+            "item_limit",
+            th.NumberType,
+            default=10,
+            description="Amount of items to request",
         ),
     ).to_dict()
 

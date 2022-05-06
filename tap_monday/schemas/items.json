@@ -31,6 +31,9 @@
     "state": {
       "type": "string"
     },
+    "parent_item_id": {
+      "type": "integer"
+    },
     "created_at": {
       "format": "date-time",
       "type": "string"
