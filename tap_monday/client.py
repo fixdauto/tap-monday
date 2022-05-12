@@ -107,13 +107,13 @@ class MondayStream(GraphQLStream):
         )
 
     def backoff_wait_generator(self) -> Callable[..., Generator[int, Any, None]]:
-        """Repeat in 70 seconds since Monday.com GraphQL limits are inforced per minute."""
-        return backoff.constant(interval=70)
+        """Repeat in one minute or more since Monday.com GraphQL limits are inforced per minute."""
+        return backoff.expo(base=61, factor=2)
 
     def backoff_max_tries(self) -> int:
-        """Try 3 times. More than that should require human investigation."""
-        return 3
+        """Try several times."""
+        return 5
 
-    def tapped_at(self) -> str: # what if no self?
+    def tapped_at(self) -> str:
         """Format current time for streams."""
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
