@@ -14,13 +14,13 @@
       "type": "string"
     },
     "description": {
-      "type": "string"
+      "type": ["string", "null"]
     },
     "type": {
       "type": "string"
     },
     "width": {
-      "type": "integer"
+      "type": ["integer", "null"]
     },
     "board_id": {
       "type": "integer"

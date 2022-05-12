@@ -7,17 +7,17 @@ from singer_sdk import typing as th  # JSON schema typing helpers
 
 from tap_monday.streams import (
     BoardsStream,
+    ColumnsStream,
     GroupsStream,
     ItemsStream,
-    ColumnsStream,
     ColumnValuesStream,
 )
 
 STREAM_TYPES = [
     BoardsStream,
+    ColumnsStream,
     GroupsStream,
     ItemsStream,
-    ColumnsStream,
     ColumnValuesStream,
 ]
 
@@ -44,13 +44,13 @@ class TapMonday(Tap):
             "board_limit",
             th.NumberType,
             default=10,
-            description="Amount of boards to request",
+            description="Amount of boards to request per page/query",
         ),
         th.Property(
             "item_limit",
             th.NumberType,
             default=10,
-            description="Amount of items to request",
+            description="Amount of items to request per page/query",
         ),
     ).to_dict()
 

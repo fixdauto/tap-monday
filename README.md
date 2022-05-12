@@ -64,8 +64,8 @@ meltano elt tap-monday your-target
 {
   "api_url": "https://api.monday.com/v2",
   "auth_token": "yourauthenticationtoken",
-  "board_limit": 10,
-  "item_limit": 10
+  "board_limit": 10, # limit per page/query, it will query all pages
+  "item_limit": 10 # limit per page/query, it will query all pages
 }
 ```
 

@@ -8,7 +8,7 @@
       "type": "string"
     },
     "description": {
-      "type": "string"
+      "type": ["string", "null"]
     },
     "state": {
       "type": "string"
@@ -37,10 +37,10 @@
       "type": "string"
     },
     "workspace_kind": {
-      "type": "string"
+      "type": ["string", "null"]
     },
     "workspace_description": {
-      "type": "string"
+      "type": ["string", "null"]
     }
   }
 }

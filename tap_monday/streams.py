@@ -2,6 +2,7 @@
 
 import requests
 import json
+import hashlib
 
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,56 +19,83 @@ class BoardsStream(MondayStream):
     name = "boards"
     schema_filepath = SCHEMAS_DIR / "boards.json"
     primary_keys = ["id"]
-    replication_key = "updated_at"
-    # updated_at, DateTimeType, ISO 8601 / RFC3339, 2022-01-07T15:56:08Z
+    replication_key = "updated_at" # ISO8601/RFC3339, example: 2022-01-07T15:56:08Z
+    # records_jsonpath = "$.records[*]"
+    # records_jsonpath: str = "$.data.boards[0].groups[*]"
+
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        return {
+            "page": next_page_token or 1,
+            "board_limit": self.config["board_limit"]
+        }
 
     @property
     def query(self) -> str:
-        """Return the API URL root, configurable via tap settings."""
-        return f"""
-            boards(
-                limit: {self.config.get("board_limit")},
-                order_by: created_at
-            ) {{
-                id
-                name
-                description
-                state
-                updated_at
-                workspace {{
+        """Form Boards query"""
+        return """
+            query Boards($board_limit: Int!, $page: Int!) {
+                boards(
+                    limit: $board_limit,
+                    page: $page,
+                    order_by: created_at
+                ) {
                     id
                     name
-                    kind
                     description
-                }}
-                owner {{
-                    id
-                    name
-                    email
-                }}
-            }}
+                    state
+                    updated_at
+                    workspace {
+                        id
+                        name
+                        kind
+                        description
+                    }
+                    owner {
+                        id
+                        name
+                        email
+                    }
+                }
+            }
         """
+
+    # def get_next_page_token(
+    #     self, response: requests.Response, previous_token: Optional[Any]
+    # ) -> Any:
+    #     self.logger.info("MAKSIM self.name: %s" % self.name)
+    #     self.logger.info("MAKSIM data len: %s" % len(response.json()["data"][self.name]))
+    #     self.logger.info("MAKSIM data previous_token: %s" % previous_token)
+    #     current_page = previous_token if previous_token is not None else 1
+    #     self.logger.info("MAKSIM data current_page: %s" % current_page)
+    #     if len(response.json()["data"][self.name]) == self.config["board_limit"]:
+    #         next_page_token = current_page + 1
+    #     else:
+    #         next_page_token = None
+    #     self.logger.info("MAKSIM data next_page_token: %s" % next_page_token)
+    #     next_page_token = None if next_page_token == 3 else next_page_token
+    #     return next_page_token
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Allow GroupsStream to query by board_id."""
         return {
-            "board_id": record["id"],
+            "board_id": record["id"], # does it need int(record["id"])
         }
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse boards response."""
         resp_json = response.json()
-        self.logger.info("MAKSIM >>>> boards response size:\n%s" % len(resp_json["data"]["boards"]))
         for row in resp_json["data"]["boards"]:
             yield row
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Convert types."""
         row["id"] = int(row["id"])
-        row["description"] = str(row["description"])
+        # row["description"] = str(row["description"])
         row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
         row["board_id"] = row["id"]  # dry calling parent?
-        workspace = row["workspace"]
+        workspace = row.pop("workspace")
 
         if (workspace is not None):
             row["workspace_id"] = int(workspace["id"])
@@ -75,7 +103,7 @@ class BoardsStream(MondayStream):
         else:
             row["workspace_id"] = 0
             row["workspace_name"] = ""
-        del row["workspace"]
+        # del row["workspace"]
 
         owner = row.pop("owner")
         row["owner_id"] = owner["id"]
@@ -83,6 +111,7 @@ class BoardsStream(MondayStream):
         row["owner_email"] = owner["email"]
 
         return row
+        # return {**row, "board_id": context["board_id"]}
 
 class GroupsStream(MondayStream):
     """Loads board groups."""
@@ -90,7 +119,7 @@ class GroupsStream(MondayStream):
     name = "groups"
     schema_filepath = SCHEMAS_DIR / "groups.json"
 
-    primary_keys = ["id"]
+    primary_keys = ["id", "board_id"]
     replication_key = None
 
     parent_stream_type = BoardsStream
@@ -105,7 +134,7 @@ class GroupsStream(MondayStream):
         ctx: dict = cast(dict, context)
         query = f"""
             boards(ids: {ctx["board_id"]}) {{
-                groups() {{
+                groups {{
                     id
                     title
                     position
@@ -122,15 +151,12 @@ class GroupsStream(MondayStream):
             "query": (" ".join([line.strip() for line in query.splitlines()])),
             "variables": {},
         }
-        self.logger.debug(f"Attempting query:\n{query}")
         return request_data
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse groups response."""
         resp_json = response.json()
-        self.logger.info("MAKSIM >>>> groups response size:\n%s" % len(resp_json["data"]["boards"]))
         for row in resp_json["data"]["boards"]:
-            self.logger.info(f"MAKSIM >>>> groups in board response size:\n{len(row)}")
             for group in row["groups"]:
                 yield group
 
@@ -140,7 +166,6 @@ class GroupsStream(MondayStream):
         row["position"] = float(row["position"])
         row["board_id"] = ctx["board_id"]
         row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
-        row["group_id"] = row["id"]
         return row
 
 class ItemsStream(MondayStream):
@@ -157,7 +182,7 @@ class ItemsStream(MondayStream):
         """Prepare custom query."""
         ctx: dict = cast(dict, context)
         query = f"""
-            items(limit: {self.config.get("item_limit")}) {{
+            items(limit: {self.config["item_limit"]}) {{
                 id
                 name
                 state
@@ -188,7 +213,6 @@ class ItemsStream(MondayStream):
             "query": (" ".join([line.strip() for line in query.splitlines()])),
             "variables": {},
         }
-        self.logger.info(f"Attempting query:\n{query}")
         return request_data
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
@@ -200,13 +224,13 @@ class ItemsStream(MondayStream):
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse items response."""
         resp_json = response.json()
-        self.logger.info("MAKSIM >>>> items response size:\n%s" % len(resp_json["data"]["items"]))
         for row in resp_json["data"]["items"]:
             yield row
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Add and convert fields."""
         row["id"] = int(row["id"])
+        row["item_id"] = int(row["id"])
         row["creator_id"] = int(row["creator_id"])
 
         board = row.pop("board")
@@ -237,7 +261,7 @@ class ColumnsStream(MondayStream):
     name = "columns"
     schema_filepath = SCHEMAS_DIR / "columns.json"
 
-    primary_keys = ["id"]
+    primary_keys = ["id", "board_id"]
     replication_key = None
 
     parent_stream_type = BoardsStream
@@ -249,14 +273,37 @@ class ColumnsStream(MondayStream):
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
         return {
-            "board_id": context["board_id"],
+            "board_ids": context["board_id"],
         }
+        # return {
+        #     "board_limit": self.config.get("board_limit")
+        # }
+
+    # @property
+    # def query(self) -> str:
+    #     return """
+    #         query($board_limit: Int!) {
+    #             boards(limit: $board_limit) {
+    #                 id
+    #                 columns {
+    #                     id
+    #                     title
+    #                     archived
+    #                     settings_str
+    #                     description
+    #                     type
+    #                     width
+    #                 }    
+    #             }
+    #         }
+    #     """
 
     @property
     def query(self) -> str:
         return """
-            query ($board_id: [Int]) {
-                boards(ids: $board_id) {
+            query($board_ids: [Int]) {
+                boards(ids: $board_ids) {
+                    id
                     columns {
                         id
                         title
@@ -277,6 +324,7 @@ class ColumnsStream(MondayStream):
     #     ctx: dict = cast(dict, context)
     #     query = f"""
     #         boards(ids: {ctx["board_id"]}) {{
+    #             id
     #             columns {{
     #                 id
     #                 title
@@ -295,33 +343,31 @@ class ColumnsStream(MondayStream):
     #         "query": (" ".join([line.strip() for line in query.splitlines()])),
     #         "variables": {},
     #     }
-    #     self.logger.debug(f"Attempting query:\n{query}")
     #     return request_data
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse groups response."""
         resp_json = response.json()
-        self.logger.info("MAKSIM >>>> columns response size:\n%s" % len(resp_json["data"]["boards"]))
         for row in resp_json["data"]["boards"]:
-            self.logger.info(f"MAKSIM >>>> columns for board response size:\n{len(row)}")
             for column in row["columns"]:
+                # column["board_id"] = int(row["id"])
+                # column["id"] = str(column["board_id"]) + "_" + column["id"]
                 yield column
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Convert types."""
         ctx: dict = cast(dict, context)
         row["board_id"] = ctx["board_id"]
-        row["id"] = str(row["board_id"]) + "_" + row["id"]
-
-        if (row["width"] is None):
-            row["width"] = 0
-        else:
-            row["width"] = int(row["width"])
-
-        row["description"] = str(row["description"] )
+        # row["id"] = str(row["board_id"]) + "_" + row["id"]
+        # row["id"] = int(hashlib.sha256((str(row["board_id"]) + row["id"]).encode('utf-8')).hexdigest(), 16) % 10**8
+        # if (row["width"] is None):
+        #     row["width"] = 0
+        # else:
+        #     row["width"] = int(row["width"])
+        # row["description"] = str(row["description"])
         row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
-
         return row
+        # return {**row, "board_id": context["board_id"]}
 
 class ColumnValuesStream(MondayStream):
     """Loads column values."""
@@ -329,35 +375,59 @@ class ColumnValuesStream(MondayStream):
     name = "column_values"
     schema_filepath = SCHEMAS_DIR / "column_values.json"
 
-    primary_keys = ["id"]
+    primary_keys = ["id", "item_id"]
     replication_key = None
 
-    # parent_stream_type = ItemsStream
-    # ignore_parent_replication_keys = True
+    parent_stream_type = ItemsStream
+    ignore_parent_replication_keys = True
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
+        # return {
+        #     "board_limit": self.config.get("board_limit")
+        # }
         return {
-            "board_limit": self.config.get("board_limit")
+            "item_ids": context["item_id"]
         }
+
+    # That exceeds what Monday.com can respond to.
+    # Whether it explicitly rejects it saying that it's too many records to ask at one time
+    # or it never responds at all.
+    # @property
+    # def query(self) -> str:
+    #     return """
+    #         query($board_limit: Int!) {
+    #             boards(limit: $board_limit, order_by: created_at) {
+    #                 id
+    #                 items {
+    #                     id
+    #                     column_values {
+    #                         id
+    #                         title
+    #                         text
+    #                         type
+    #                         value
+    #                         additional_info
+    #                     }
+    #                 }
+    #             }
+    #         }
+    #     """
 
     @property
     def query(self) -> str:
         return """
-            query ($board_limit: Int!) {
-                boards(limit: $board_limit, order_by: created_at) {
+            query ($item_ids: [Int]) {
+                items (ids: $item_ids) {
                     id
-                    items {
+                    column_values {
                         id
-                        column_values {
-                            id
-                            title
-                            text
-                            type
-                            value
-                            additional_info
-                        }
+                        title
+                        text
+                        type
+                        value
+                        additional_info
                     }
                 }
             }
@@ -387,27 +457,21 @@ class ColumnValuesStream(MondayStream):
     #         "query": (" ".join([line.strip() for line in query.splitlines()])),
     #         "variables": {},
     #     }
-    #     self.logger.debug(f"Attempting query:\n{query}")
     #     return request_data
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse groups response."""
         resp_json = response.json()
-        self.logger.info("MAKSIM >>>> column values response size:\n%s" % len(resp_json["data"]["boards"]))
-        for row in resp_json["data"]["boards"]:
-            self.logger.info(f"MAKSIM >>>> column values for board response size:\n{len(row)}")
-            for item in row["items"]:
-                self.logger.info(f"MAKSIM >>>> column values for item response size:\n{len(row)}")
-                for column_value in item["column_values"]:
-                    column_value["board_id"] = row["id"]
-                    column_value["item_id"] = item["id"]
-                    column_value["id"] = row["id"] + "_" + item["id"] + "_" + column_value["id"]
-                    yield column_value
+        for row in resp_json["data"]["items"]:
+            for column_value in row["column_values"]:
+                # column_value["item_id"] = row["id"]
+                # column_value["id"] = row["id"] + "_" + column_value["id"]
+                yield column_value
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Convert types."""
-        # ctx: dict = cast(dict, context)
-        # row["item_id"] = ctx["item_id"]
+        ctx: dict = cast(dict, context)
+        row["item_id"] = ctx["item_id"]
         # row["id"] = str(row["item_id"]) + "_" + row["id"]
 
         if(row["value"] is None):
@@ -420,6 +484,6 @@ class ColumnValuesStream(MondayStream):
         else:
             row["additional_info"] = json.dumps(row["additional_info"])
 
-        row["text"] = str(row["text"])
+        # row["text"] = str(row["text"])
         row["tapped_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") # dry calling parent?
         return row

@@ -1,10 +1,11 @@
 """GraphQL client handling, including MondayStream base class."""
 
 import requests
-from typing import Optional, Iterable
+from typing import Any, Optional, Iterable, Callable, Generator
+import backoff
 
 from singer_sdk.streams import GraphQLStream
-
+from singer_sdk.exceptions import FatalAPIError, RetriableAPIError
 
 class MondayStream(GraphQLStream):
     """Monday stream class."""
@@ -15,18 +16,14 @@ class MondayStream(GraphQLStream):
         # print(self.config["api_url"])
         return self.config["api_url"]
 
-    # Alternatively, use a static string for url_base:
-    # url_base = "https://api.mysample.com"
-
     @property
     def http_headers(self) -> dict:
         """Authorise requests."""
         headers = {}
         # print(self.config.get("auth_token"))
-        headers["Authorization"] = self.config.get("auth_token")
-        headers["Content-Type"] = self.config.get("application/json")
-        if "user_agent" in self.config:
-            headers["User-Agent"] = self.config.get("user_agent")
+        headers["Authorization"] = self.config["auth_token"]
+        headers["Content-Type"] = "application/json"
+        headers["User-Agent"] = "Meltano"
         # If not using an authenticator,
         # you may also provide inline auth headers:
         # headers["Private-Token"] = self.config.get("auth_token")
@@ -46,33 +43,88 @@ class MondayStream(GraphQLStream):
     #     """Abstract method."""
     #     return row
 
+    def get_next_page_token(
+        self, response: requests.Response, previous_token: Optional[Any]
+    ) -> Any:
+        self.logger.info("MAKSIM 2 self.name: %s" % self.name)
+        if self.name == 'items':
+            limit_per_page = self.config["item_limit"]
+        elif self.name == 'boards':
+            limit_per_page = self.config["board_limit"]
+        else:
+            return None 
+            # All other objects are queried by parent IDs
+        self.logger.info("MAKSIM 2 limit_per_page: %s" % limit_per_page)
+        self.logger.info("MAKSIM 2 data len: %s" % len(response.json()["data"][self.name]))
+        self.logger.info("MAKSIM 2 data previous_token: %s" % previous_token)
+        current_page = previous_token if previous_token is not None else 1
+        self.logger.info("MAKSIM 2 data current_page: %s" % current_page)
+        if len(response.json()["data"][self.name]) == limit_per_page:
+            next_page_token = current_page + 1
+        else:
+            next_page_token = None
+        self.logger.info("MAKSIM 2 data next_page_token: %s" % next_page_token)
+        next_page_token = None if next_page_token == 3 else next_page_token
+        return next_page_token
+
     @property
     def query(self) -> str:
         """Satisfy SDK complains. It's actually used only in child streams."""
         return ""
 
-    #     graphql_query="""
-    #         me {
-    #             id
-    #             name
-    #             email
-    #             is_admin
-    #             created_at
-    #             join_date
-    #             account {
-    #                 name
-    #                 id
-    #             }
-    #         }
-    #     """
-    #     return graphql_query
+    def validate_response(self, response: requests.Response) -> None:
+        if response.status_code == 429: # Rate limit error
+            msg = (
+                f"{response.status_code} Server Error: "
+                f"{response.reason}"
+            )
+            raise RetriableAPIError(msg)
+        elif 400 <= response.status_code < 500:
+            msg = (
+                f"{response.status_code} Client Error: "
+                f"{response.reason}"
+            )
+            raise FatalAPIError(msg)
+        elif 500 <= response.status_code < 600:
+            msg = (
+                f"{response.status_code} Server Error: "
+                f"{response.reason}"
+            )
+            raise RetriableAPIError(msg)
 
-    # def validate_response(self, response):
-    #     # Still catch error status codes
-    #     super().validate_response(response)
+    def request_decorator(self, func: Callable) -> Callable:
+        """Handle custom backoff.
 
-    #     data = response.json()
-    #     if data["status"] == "ERROR":
-    #         raise FatalAPIError("Error message found :(")
-    #     if data["status"] == self."UNAVAILABLE":
-    #         raise RetriableAPIError("API is unavailable")
+        Exact copy from RESTStream so other methods can be overriden.
+        
+        """
+        decorator: Callable = backoff.on_exception(
+            self.backoff_wait_generator,
+            (
+                RetriableAPIError,
+                requests.exceptions.ReadTimeout,
+            ),
+            max_tries=self.backoff_max_tries,
+            on_backoff=self.backoff_handler,
+        )(func)
+        return decorator
+
+    def backoff_handler(self, details: dict) -> None:
+        """Log backoff status."""
+
+        self.logger.error(
+            "Backing off {wait:0.1f} seconds after {tries} tries "
+            "calling function {target} with args {args} and kwargs "
+            "{kwargs}".format(**details)
+        )
+
+    def backoff_wait_generator(self) -> Callable[..., Generator[int, Any, None]]:
+        """Repeat in 70 seconds since Monday.com GraphQL limits are inforced per minute."""
+
+        return backoff.constant(interval=70)
+
+    def backoff_max_tries(self) -> int:
+        """Try 3 times. More than that should require human investigation."""
+
+        return 3
+

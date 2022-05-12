@@ -8,7 +8,7 @@
       "type": "string"
     },
     "text": {
-      "type": "string"
+      "type": ["string", "null"]
     },
     "type": {
       "type": "string"
@@ -18,9 +18,6 @@
     },
     "additional_info": {
       "type": "string"
-    },
-    "board_id": {
-      "type": "integer"
     },
     "item_id": {
       "type": "integer"

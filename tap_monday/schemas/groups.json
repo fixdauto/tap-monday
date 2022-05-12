@@ -17,10 +17,10 @@
       "type": "string"
     },
     "archived": {
-      "type": "boolean"
+      "type": ["boolean", "null"]
     },
     "deleted": {
-      "type": "boolean"
+      "type": ["boolean", "null"]
     },
     "tapped_at": {
       "format": "date-time",
