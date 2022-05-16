@@ -19,8 +19,6 @@ class BoardsStream(MondayStream):
     schema_filepath = SCHEMAS_DIR / "boards.json"
     primary_keys = ["id"]
     replication_key = "updated_at" # ISO8601/RFC3339, example: 2022-01-07T15:56:08Z
-    # records_jsonpath = "$.records[*]"
-    # records_jsonpath: str = "$.data.boards[0].groups[*]"
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -66,12 +64,6 @@ class BoardsStream(MondayStream):
             "board_id": record["id"]
         }
 
-    def parse_response(self, response: requests.Response) -> Iterable[dict]:
-        """Parse boards response."""
-        resp_json = response.json()
-        for row in resp_json["data"]["boards"]:
-            yield row
-
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Convert types."""
         row["id"] = int(row["id"])
@@ -97,6 +89,7 @@ class GroupsStream(MondayStream):
 
     name = "groups"
     schema_filepath = SCHEMAS_DIR / "groups.json"
+    # records_jsonpath: str = "$.data.boards[*].groups[*]"
 
     primary_keys = ["id", "board_id"]
     replication_key = None
@@ -126,32 +119,6 @@ class GroupsStream(MondayStream):
                 }
             }
         """
-
-    # def prepare_request_payload(
-    #     self, context: Optional[dict], next_page_token: Optional[Any]
-    # ) -> Optional[dict]:
-    #     """Prepare custom query."""
-    #     ctx: dict = cast(dict, context)
-    #     query = f"""
-    #         boards(ids: {ctx["board_id"]}) {{
-    #             groups {{
-    #                 id
-    #                 title
-    #                 position
-    #                 color
-    #             }}
-    #         }}
-    #     """
-
-    #     # Using partially `super().prepare_request_payload` code
-    #     # Can't simply set query=... because `context` is not available in the class,
-    #     # only passed into `prepare_request_payload`
-    #     query = "query { " + query + " }"
-    #     request_data = {
-    #         "query": (" ".join([line.strip() for line in query.splitlines()])),
-    #         "variables": {},
-    #     }
-    #     return request_data
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         """Parse groups response."""
@@ -220,61 +187,15 @@ class ItemsStream(MondayStream):
             }
         """
 
-    # def prepare_request_payload(
-    #     self, context: Optional[dict], next_page_token: Optional[Any]
-    # ) -> Optional[dict]:
-    #     """Prepare custom query."""
-    #     ctx: dict = cast(dict, context)
-    #     query = f"""
-    #         items(limit: {self.config["item_limit"]}) {{
-    #             id
-    #             name
-    #             state
-    #             created_at
-    #             updated_at
-    #             creator_id
-    #             creator {{
-    #                 email
-    #                 name
-    #             }}
-    #             board {{
-    #                 id
-    #                 name
-    #             }}
-    #             group {{
-    #                 id
-    #                 title
-    #             }}
-    #             parent_item {{
-    #                 id
-    #             }}
-    #         }}
-    #     """
-
-    #     # DRY
-    #     query = "query { " + query + " }"
-    #     request_data = {
-    #         "query": (" ".join([line.strip() for line in query.splitlines()])),
-    #         "variables": {},
-    #     }
-    #     return request_data
-
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Allow ColumnValuesStream to query by item_id."""
         return {
             "item_id": record["id"],
         }
 
-    def parse_response(self, response: requests.Response) -> Iterable[dict]:
-        """Parse items response."""
-        resp_json = response.json()
-        for row in resp_json["data"]["items"]:
-            yield row
-
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Add and convert fields."""
         row["id"] = int(row["id"])
-        row["item_id"] = int(row["id"])
         row["creator_id"] = int(row["creator_id"])
 
         board = row.pop("board")
@@ -305,7 +226,6 @@ class ColumnsStream(MondayStream):
 
     name = "columns"
     schema_filepath = SCHEMAS_DIR / "columns.json"
-
     primary_keys = ["id", "board_id"]
     replication_key = None
 

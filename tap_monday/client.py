@@ -29,32 +29,26 @@ class MondayStream(GraphQLStream):
         self, response: requests.Response, previous_token: Optional[Any]
     ) -> Any:
         """Returns the number of the next page."""
-        self.logger.info("MAKSIM self.name: %s" % self.name)
+        self.logger.debug("get_next_page_token stream name: %s" % self.name)
         if self.name == 'items':
             limit_per_page = self.config["item_limit"]
         elif self.name == 'boards':
             limit_per_page = self.config["board_limit"]
         else:
             return None 
-            # All other objects are queried by parent IDs
+            # All other objects are queried by parent IDs without pagination
 
-        self.logger.info("MAKSIM limit_per_page: %s" % limit_per_page)
-        self.logger.info("MAKSIM data len: %s" % len(response.json()["data"][self.name]))
-        self.logger.info("MAKSIM data previous_token: %s" % previous_token)
+        self.logger.debug("get_next_page_token limit_per_page: %s" % limit_per_page)
+        self.logger.debug("get_next_page_token data len: %s" % len(response.json()["data"][self.name]))
+        self.logger.debug("get_next_page_token previous_token: %s" % previous_token)
         current_page = previous_token if previous_token is not None else 1
-        self.logger.info("MAKSIM data current_page: %s" % current_page)
+        self.logger.debug("get_next_page_token current_page: %s" % current_page)
         if len(response.json()["data"][self.name]) == limit_per_page:
             next_page_token = current_page + 1
         else:
             next_page_token = None
-        self.logger.info("MAKSIM 2 data next_page_token: %s" % next_page_token)
-        next_page_token = None if next_page_token == 5 else next_page_token
+        self.logger.debug("get_next_page_token next_page_token: %s" % next_page_token)
         return next_page_token
-
-    # @property
-    # def query(self) -> str:
-    #     """Satisfy SDK complains. It's actually used only in child streams."""
-    #     return ""
 
     def validate_response(self, response: requests.Response) -> None:
         """Check response for errors.
@@ -82,19 +76,17 @@ class MondayStream(GraphQLStream):
             raise RetriableAPIError(msg)
 
     def request_decorator(self, func: Callable) -> Callable:
-        """Handle custom backoff.
-
-        Exact copy from RESTStream so other methods can be overriden.
-        
-        """
+        """Handle custom backoff."""
         decorator: Callable = backoff.on_exception(
-            self.backoff_wait_generator,
+            backoff.constant,
             (
                 RetriableAPIError,
                 requests.exceptions.ReadTimeout,
             ),
-            max_tries=self.backoff_max_tries,
+            max_tries=5,
             on_backoff=self.backoff_handler,
+            jitter=None,
+            interval=70
         )(func)
         return decorator
 
@@ -105,14 +97,6 @@ class MondayStream(GraphQLStream):
             "calling function {target} with args {args} and kwargs "
             "{kwargs}".format(**details)
         )
-
-    def backoff_wait_generator(self) -> Callable[..., Generator[int, Any, None]]:
-        """Repeat in one minute or more since Monday.com GraphQL limits are inforced per minute."""
-        return backoff.expo(base=61, factor=2)
-
-    def backoff_max_tries(self) -> int:
-        """Try several times."""
-        return 5
 
     def tapped_at(self) -> str:
         """Format current time for streams."""

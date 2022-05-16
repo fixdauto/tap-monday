@@ -6,11 +6,34 @@ Built with the [Meltano Tap SDK](https://sdk.meltano.com) for Singer Taps.
 
 ## Install in Meltano
 
+```
+meltano install extractor tap-monday
+meltano invoke tap-monday
+meltano elt tap-monday your-target
+```
+
+## Config Examples
+
+### Tap
+
+```
+{
+  "api_url": "https://api.monday.com/v2",
+  "auth_token": "yourauthenticationtoken",
+  "board_limit": 10, # limit per page
+  "item_limit": 10 # limit per page
+  "item_max_pages": 2
+}
+```
+
+### Meltano
+
 In meltano.yml:
 
 ```
 plugins:
   extractors:
+...
   - name: tap-monday
     namespace: tap_monday
     pip_url: git+https://github.com/fixdauto/tap-monday.git
@@ -25,7 +48,7 @@ plugins:
       kind: password
       label: Authentication Token
       documentation: https://support.monday.com/hc/en-us/articles/360005144659-Does-monday-com-have-an-API-
-      decription: Authentication token you should generate in your monday.com acccount.
+      decription: Authentication token you should generate in your monday.com acccunt.
         Look under Admin setting.
     - name: api_url
       kind: string
@@ -34,42 +57,42 @@ plugins:
       description: Monday.com web-API endpoint URL
     - name: board_limit
       kind: integer
-      value: 1000
-      label: Maximum number of boards to return
-      description: Usually accounts don't have that many boards to bother with pagination.
-        Setting limit to high enough value returns all the boards anyway.
+      value: 50
+      label: Maximum number of boards to return per page/query
+      description: Maximum number of boards to return per page/query.
     - name: item_limit
       kind: integer
-      value: 1000
-      label: Maximum number of items to return
-      description: Usually Monday.com have more items than boards. Try a high value to see if you get all the items without pagination.
+      value: 200
+      label: Maximum number of items to return per page/query
+      description: Maximum number of items to return per page/query. Item queries are limited to 1 per minute. 200-250 limit seems to be good, with that value child stream for column_values queries takes a little over 1 minute between items queries.
     select:
-    - boards.name
-    - boards.updated_at
+    - boards.*
+    - items.*
+    - columns.*
+    - groups.*
+    - column_values.*
     metadata:
       boards:
         replication-method: INCREMENTAL
         replication-key: updated_at
+      items:
+        replication-method: INCREMENTAL
+        replication-key: updated_at
 ```
 
-```
-meltano install extractor tap-monday
-meltano invoke tap-monday
-meltano elt tap-monday your-target
-```
 
-## Config Example
-
+With [target-snowflake](https://github.com/fixdauto/target-snowflake) and under 4GB total RAM use these settings for the loader so the process won't exceed the available memory:
 ```
-{
-  "api_url": "https://api.monday.com/v2",
-  "auth_token": "yourauthenticationtoken",
-  "board_limit": 10, # limit per page/query, it will query all pages
-  "item_limit": 10 # limit per page/query, it will query all pages
-}
+loaders:
+...
+  - name: target-snowflake
+    pip_url: git+https://github.com/fixdauto/target-snowflake@fixd
+...
+    config:
+...
+      max_batch_rows: 250
+      max_buffer_size: 32768
 ```
-
-Meltano extractor configuration example is in `meltano.yml`
 
 ## When you change the code
 

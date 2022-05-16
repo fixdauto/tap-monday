@@ -44,13 +44,13 @@ class TapMonday(Tap):
             "board_limit",
             th.NumberType,
             default=10,
-            description="Amount of boards to request per page/query",
+            description="Amount of boards to request per page",
         ),
         th.Property(
             "item_limit",
             th.NumberType,
             default=10,
-            description="Amount of items to request per page/query",
+            description="Amount of items to request per page",
         ),
     ).to_dict()
 
