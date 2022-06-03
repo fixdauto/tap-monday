@@ -3,7 +3,7 @@ import pytest
 from singer_sdk.testing import get_standard_tap_tests
 
 from tap_monday.tap import TapMonday
-from tap_monday.streams import BoardsStream, GroupsStream
+from tap_monday.streams import BoardsStream, GroupsStream, ItemsStream
 
 SAMPLE_CONFIG = {
     "api_url": "mock://api.monday.test/v2",
@@ -12,84 +12,23 @@ SAMPLE_CONFIG = {
 }
 
 
-@pytest.fixture
-def fixture_boards():
-    return {
-        "data": {
-            "boards": [
-                {
-                    "name": "My board name",
-                    "id": "2389168662",
-                    "description": None,
-                    "state": "active",
-                    "updated_at": "2022-02-05T00:27:23Z",
-                }
-            ]
-        }
-    }
-
-
-@pytest.fixture
-def fixture_groups():
-    return {
-        "data": {
-            "boards": [
-                {
-                    "groups": [
-                        {
-                            "title": "My group name",
-                            "position": "512.0",
-                            "id": "new_group23604",
-                        }
-                    ]
-                }
-            ]
-        }
-    }
-
-
-@pytest.fixture
-def fixture_items():
-    return {
-        "data": {
-            "boards": [
-                {
-                    "groups": [
-                        {
-                            "title": "My group name",
-                            "position": "65536.0",
-                            "id": "new_group8875",
-                            "items": [
-                                {
-                                    "name": "My item name",
-                                    "created_at": "2021-10-07T14:31:02Z",
-                                    "column_values": [
-                                        {
-                                            "id": "subitems",
-                                            "title": "Subitems",
-                                            "type": "subtasks",
-                                            "value": None,
-                                            "text": "",
-                                        }
-                                    ],
-                                }
-                            ],
-                        }
-                    ]
-                }
-            ]
-        }
-    }
-
-
-def test_tap_standard(requests_mock, fixture_boards, fixture_groups, fixture_items):
+def test_tap_standard(
+    requests_mock,
+    fixture_boards,
+    fixture_groups,
+    fixture_items,
+    fixture_columns,
+    fixture_column_values
+):
     requests_mock.register_uri(
         "POST",
         SAMPLE_CONFIG["api_url"],
         [
             {"json": fixture_boards, "status_code": 200},
-            {"json": fixture_groups, "status_code": 200},
+            {"json": fixture_columns, "status_code": 200},
             {"json": fixture_items, "status_code": 200},
+            {"json": fixture_column_values, "status_code": 200},
+            {"json": fixture_groups, "status_code": 200},
         ],
     )
     tests = get_standard_tap_tests(TapMonday, config=SAMPLE_CONFIG)
@@ -102,7 +41,7 @@ def test_board_parsing(fixture_boards):
     stream = BoardsStream(tap=tap)
     processed_row = stream.post_process(fixture_boards["data"]["boards"][0])
     assert processed_row["id"] == 2389168662
-    assert processed_row["description"] == "None"
+    assert processed_row["description"] == None
 
 
 def test_group_parsing(fixture_groups):
@@ -113,3 +52,15 @@ def test_group_parsing(fixture_groups):
     )
     assert processed_row["position"] == 512.0
     assert processed_row["board_id"] == 2389168662
+
+def test_items_parsing(fixture_items):
+    tap = TapMonday(config=SAMPLE_CONFIG)
+    stream = ItemsStream(tap=tap)
+    processed_row = stream.post_process(
+        fixture_items["data"]["items"][0]
+    )
+    assert processed_row["board_id"] == 2389168662
+    assert processed_row["parent_item_id"] == 0
+
+# columns
+# column values
