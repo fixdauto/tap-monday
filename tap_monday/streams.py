@@ -84,6 +84,7 @@ class BoardsStream(MondayStream):
 
         return row
 
+
 class GroupsStream(MondayStream):
     """Loads board groups."""
 
@@ -268,6 +269,7 @@ class ColumnsStream(MondayStream):
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Convert types."""
         ctx: dict = cast(dict, context)
+
         row["board_id"] = ctx["board_id"]
         row["tapped_at"] = self.tapped_at()
         return row
