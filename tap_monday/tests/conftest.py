@@ -1,7 +1,10 @@
+"""Fixtures for tests."""
+
 import pytest
 
 @pytest.fixture
 def fixture_boards():
+    """Emulate Monday.com boards query."""
     return {
         "data": {
             "boards": [
@@ -30,6 +33,7 @@ def fixture_boards():
 
 @pytest.fixture
 def fixture_boards_some_empty():
+    """Emulate Monday.com boards query with some empty values."""
     return {
         "data": {
             "boards": [
@@ -53,6 +57,7 @@ def fixture_boards_some_empty():
 
 @pytest.fixture
 def fixture_groups():
+    """Emulate Monday.com groups query."""
     return {
         "data": {
             "boards": [
@@ -76,6 +81,7 @@ def fixture_groups():
 
 @pytest.fixture
 def fixture_items():
+    """Emulate Monday.com items query."""
     return {
         "data": {
             "items": [
@@ -108,6 +114,7 @@ def fixture_items():
 
 @pytest.fixture
 def fixture_items_some_empty():
+    """Emulate Monday.com items query with some empty values."""
     return {
         "data": {
             "items": [
@@ -136,6 +143,7 @@ def fixture_items_some_empty():
 
 @pytest.fixture
 def fixture_columns():
+    """Emulate Monday.com columns query."""
     return {
         "data": {
             "boards": [
@@ -160,6 +168,7 @@ def fixture_columns():
 
 @pytest.fixture
 def fixture_column_values():
+    """Emulate Monday.com column values query."""
     return {
         "data": {
             "items": [
@@ -183,6 +192,7 @@ def fixture_column_values():
 
 @pytest.fixture
 def fixture_column_values_some_empty():
+    """Emulate Monday.com column values query with some empty values."""
     return {
         "data": {
             "items": [

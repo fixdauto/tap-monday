@@ -23,6 +23,7 @@ class BoardsStream(MondayStream):
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
+        """Set pagination and limit."""
         return {
             "page": next_page_token or 1,
             "board_limit": self.config["board_limit"],
@@ -30,7 +31,7 @@ class BoardsStream(MondayStream):
 
     @property
     def query(self) -> str:
-        """Form Boards query"""
+        """Form Boards query."""
         return """
             query Boards($board_limit: Int!, $page: Int!) {
                 boards(
@@ -90,7 +91,6 @@ class GroupsStream(MondayStream):
 
     name = "groups"
     schema_filepath = SCHEMAS_DIR / "groups.json"
-    # records_jsonpath: str = "$.data.boards[*].groups[*]"
 
     primary_keys = ["id", "board_id"]
     replication_key = None
@@ -101,12 +101,14 @@ class GroupsStream(MondayStream):
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
+        """Get board_ids from the context."""
         return {
             "board_ids": context["board_id"],
         }
 
     @property
     def query(self) -> str:
+        """Form Groups query."""
         return """
             query Groups($board_ids: [Int]) {
                 boards(ids: $board_ids) {
@@ -148,6 +150,7 @@ class ItemsStream(MondayStream):
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
+        """Set pagination and limit."""
         return {
             "page": next_page_token or 1,
             "item_limit": self.config["item_limit"]
@@ -155,7 +158,7 @@ class ItemsStream(MondayStream):
 
     @property
     def query(self) -> str:
-        """Form Boards query"""
+        """Form Items query."""
         return """
             query Items($item_limit: Int!, $page: Int!) {
                 items(
@@ -236,12 +239,14 @@ class ColumnsStream(MondayStream):
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
+        """Get board_ids from the context."""
         return {
             "board_ids": context["board_id"],
         }
 
     @property
     def query(self) -> str:
+        """Form Columns query."""
         return """
             query Columns($board_ids: [Int]) {
                 boards(ids: $board_ids) {
@@ -290,12 +295,14 @@ class ColumnValuesStream(MondayStream):
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
+        """Get item_id from the context."""
         return {
             "item_ids": context["item_id"]
         }
 
     @property
     def query(self) -> str:
+        """Form ColumnValues query."""
         return """
             query ColumnValues($item_ids: [Int]) {
                 items (ids: $item_ids) {

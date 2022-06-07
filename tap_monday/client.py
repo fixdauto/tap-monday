@@ -28,7 +28,7 @@ class MondayStream(GraphQLStream):
     def get_next_page_token(
         self, response: requests.Response, previous_token: Optional[Any]
     ) -> Any:
-        """Returns the number of the next page."""
+        """Return the number of the next page."""
         self.logger.debug("get_next_page_token stream name: %s" % self.name)
         if self.name == 'items':
             limit_per_page = self.config["item_limit"]
