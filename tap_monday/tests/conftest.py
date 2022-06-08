@@ -181,9 +181,17 @@ def fixture_column_values():
                             "id": "status",
                             "title": "Status",
                             "type": "color",
-                            "value": '{"index":1,"post_id":null,"changed_at":"2022-04-14T19:07:18.872Z"}',
+                            "value": '{'
+                            '"index":1,'
+                            '"post_id":null,'
+                            '"changed_at":"2022-04-14T19:07:18.872Z"'
+                            '}',
                             "text": "Done",
-                            "additional_info": '{"label":"Done","color":"#00c875","changed_at":"2022-04-14T19:07:18.872Z"}',
+                            "additional_info": '{'
+                            '"label":"Done",'
+                            '"color":"#00c875",'
+                            '"changed_at":"2022-04-14T19:07:18.872Z"'
+                            '}',
                         }
                     ],
                 }

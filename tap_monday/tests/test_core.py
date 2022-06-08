@@ -1,5 +1,3 @@
-import pytest
-
 from singer_sdk.testing import get_standard_tap_tests
 
 from tap_monday.tap import TapMonday
@@ -66,7 +64,7 @@ def test_board_parsing_empty_values(fixture_boards_some_empty):
 
     assert processed_row["id"] == 2389168662
     assert processed_row["name"] == "My board"
-    assert processed_row["description"] == None
+    assert processed_row["description"] is None
     assert processed_row["state"] == "active"
     assert processed_row["updated_at"] == "2022-02-05T00:27:23Z"
     assert processed_row["owner_id"] == 21226602
@@ -88,8 +86,8 @@ def test_group_parsing(fixture_groups):
     assert processed_row["position"] == 512.0
     assert processed_row["id"] == "new_group23604"
     assert processed_row["color"] == "#fdab3d"
-    assert processed_row["archived"] == False
-    assert processed_row["deleted"] == False
+    assert processed_row["archived"] is False
+    assert processed_row["deleted"] is False
 
 
 def test_items_parsing(fixture_items):
@@ -143,9 +141,9 @@ def test_columns_parsing(fixture_columns):
     assert processed_row["board_id"] == 2389168662
     assert processed_row["id"] == "check"
     assert processed_row["title"] == "Approved"
-    assert processed_row["archived"] == False
+    assert processed_row["archived"] is False
     assert processed_row["settings_str"] == "{}"
-    assert processed_row["description"] == None
+    assert processed_row["description"] is None
     assert processed_row["type"] == "boolean"
     assert processed_row["width"] == 120
 
@@ -165,11 +163,19 @@ def test_column_values_parsing(fixture_column_values):
     assert processed_row["text"] == "Done"
     assert (
         processed_row["value"]
-        == '"{\\"index\\":1,\\"post_id\\":null,\\"changed_at\\":\\"2022-04-14T19:07:18.872Z\\"}"'
+        == '"{'
+        '\\"index\\":1,'
+        '\\"post_id\\":null,'
+        '\\"changed_at\\":\\"2022-04-14T19:07:18.872Z\\'
+        '"}"'
     )
     assert (
         processed_row["additional_info"]
-        == '"{\\"label\\":\\"Done\\",\\"color\\":\\"#00c875\\",\\"changed_at\\":\\"2022-04-14T19:07:18.872Z\\"}"'
+        == '"{'
+        '\\\"label\\":\\"Done\\",'
+        '\\"color\\":\\"#00c875\\",'
+        '\\"changed_at\\":\\"2022-04-14T19:07:18.872Z\\'
+        '"}"'
     )
 
 

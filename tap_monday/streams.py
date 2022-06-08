@@ -2,7 +2,7 @@
 
 import requests
 import json
-import hashlib
+# import hashlib
 
 from pathlib import Path
 from typing import Any, Optional, Dict, Iterable, cast
@@ -116,7 +116,7 @@ class GroupsStream(MondayStream):
                         title
                         position
                         color
-                    }    
+                    }
                 }
             }
         """
@@ -254,7 +254,7 @@ class ColumnsStream(MondayStream):
                         description
                         type
                         width
-                    }    
+                    }
                 }
             }
         """
