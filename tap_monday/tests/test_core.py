@@ -162,17 +162,15 @@ def test_column_values_parsing(fixture_column_values):
     assert processed_row["type"] == "color"
     assert processed_row["text"] == "Done"
     assert (
-        processed_row["value"]
-        == '"{'
+        processed_row["value"] == '"{'
         '\\"index\\":1,'
         '\\"post_id\\":null,'
         '\\"changed_at\\":\\"2022-04-14T19:07:18.872Z\\'
         '"}"'
     )
     assert (
-        processed_row["additional_info"]
-        == '"{'
-        '\\\"label\\":\\"Done\\",'
+        processed_row["additional_info"] == '"{'
+        '\\"label\\":\\"Done\\",'
         '\\"color\\":\\"#00c875\\",'
         '\\"changed_at\\":\\"2022-04-14T19:07:18.872Z\\'
         '"}"'

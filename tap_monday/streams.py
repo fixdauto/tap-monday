@@ -2,7 +2,6 @@
 
 import requests
 import json
-# import hashlib
 
 from pathlib import Path
 from typing import Any, Optional, Dict, Iterable, cast
@@ -294,9 +293,7 @@ class ColumnValuesStream(MondayStream):
     ) -> Dict[str, Any]:
         """Get item_id from the context."""
         ctx: dict = cast(dict, context)
-        return {
-            "item_ids": ctx["item_id"]
-        }
+        return {"item_ids": ctx["item_id"]}
 
     @property
     def query(self) -> str:

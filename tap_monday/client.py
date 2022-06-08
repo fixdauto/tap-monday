@@ -2,6 +2,7 @@
 
 import requests
 from typing import Any, Optional, Callable
+
 # from typing import Any, Optional, Iterable, Callable, Generator
 import backoff
 from datetime import datetime, timezone
