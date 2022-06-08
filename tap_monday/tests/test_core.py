@@ -3,7 +3,13 @@ import pytest
 from singer_sdk.testing import get_standard_tap_tests
 
 from tap_monday.tap import TapMonday
-from tap_monday.streams import BoardsStream, GroupsStream, ItemsStream, ColumnsStream, ColumnValuesStream
+from tap_monday.streams import (
+    BoardsStream,
+    GroupsStream,
+    ItemsStream,
+    ColumnsStream,
+    ColumnValuesStream,
+)
 
 SAMPLE_CONFIG = {
     "api_url": "mock://api.monday.test/v2",
@@ -18,7 +24,7 @@ def test_tap_standard(
     fixture_groups,
     fixture_items,
     fixture_columns,
-    fixture_column_values
+    fixture_column_values,
 ):
     requests_mock.register_uri(
         "POST",
@@ -89,9 +95,7 @@ def test_group_parsing(fixture_groups):
 def test_items_parsing(fixture_items):
     tap = TapMonday(config=SAMPLE_CONFIG)
     stream = ItemsStream(tap=tap)
-    processed_row = stream.post_process(
-        fixture_items["data"]["items"][0]
-    )
+    processed_row = stream.post_process(fixture_items["data"]["items"][0])
 
     assert processed_row["board_id"] == 2389168662
     assert processed_row["name"] == "My item name"
@@ -111,9 +115,7 @@ def test_items_parsing(fixture_items):
 def test_items_parsing_empty_values(fixture_items_some_empty):
     tap = TapMonday(config=SAMPLE_CONFIG)
     stream = ItemsStream(tap=tap)
-    processed_row = stream.post_process(
-        fixture_items_some_empty["data"]["items"][0]
-    )
+    processed_row = stream.post_process(fixture_items_some_empty["data"]["items"][0])
 
     assert processed_row["id"] == 2274512428
     assert processed_row["name"] == "My item name"
@@ -161,8 +163,14 @@ def test_column_values_parsing(fixture_column_values):
     assert processed_row["title"] == "Status"
     assert processed_row["type"] == "color"
     assert processed_row["text"] == "Done"
-    assert processed_row["value"] == '"{\\"index\\":1,\\"post_id\\":null,\\"changed_at\\":\\"2022-04-14T19:07:18.872Z\\"}"'
-    assert processed_row["additional_info"] == '"{\\"label\\":\\"Done\\",\\"color\\":\\"#00c875\\",\\"changed_at\\":\\"2022-04-14T19:07:18.872Z\\"}"'
+    assert (
+        processed_row["value"]
+        == '"{\\"index\\":1,\\"post_id\\":null,\\"changed_at\\":\\"2022-04-14T19:07:18.872Z\\"}"'
+    )
+    assert (
+        processed_row["additional_info"]
+        == '"{\\"label\\":\\"Done\\",\\"color\\":\\"#00c875\\",\\"changed_at\\":\\"2022-04-14T19:07:18.872Z\\"}"'
+    )
 
 
 def test_column_values_parsing_empty_values(fixture_column_values_some_empty):

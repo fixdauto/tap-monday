@@ -18,7 +18,7 @@ class BoardsStream(MondayStream):
     name = "boards"
     schema_filepath = SCHEMAS_DIR / "boards.json"
     primary_keys = ["id"]
-    replication_key = "updated_at" # ISO8601/RFC3339, example: 2022-01-07T15:56:08Z
+    replication_key = "updated_at"  # ISO8601/RFC3339, example: 2022-01-07T15:56:08Z
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -61,9 +61,7 @@ class BoardsStream(MondayStream):
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Allow GroupsStream to query by board_id."""
-        return {
-            "board_id": record["id"]
-        }
+        return {"board_id": record["id"]}
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Convert types."""
@@ -71,7 +69,7 @@ class BoardsStream(MondayStream):
         row["tapped_at"] = self.tapped_at()
 
         workspace = row.pop("workspace")
-        if (workspace is not None):
+        if workspace is not None:
             row["workspace_id"] = int(workspace["id"])
             row["workspace_name"] = workspace["name"]
         else:
@@ -151,10 +149,7 @@ class ItemsStream(MondayStream):
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
         """Set pagination and limit."""
-        return {
-            "page": next_page_token or 1,
-            "item_limit": self.config["item_limit"]
-        }
+        return {"page": next_page_token or 1, "item_limit": self.config["item_limit"]}
 
     @property
     def query(self) -> str:
@@ -214,7 +209,7 @@ class ItemsStream(MondayStream):
         row["parent_item_id"] = 0 if parent_item is None else int(parent_item["id"])
 
         creator = row.pop("creator")
-        if (creator is not None):
+        if creator is not None:
             row["creator_email"] = creator["email"]
             row["creator_name"] = creator["name"]
         else:
@@ -296,9 +291,7 @@ class ColumnValuesStream(MondayStream):
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
         """Get item_id from the context."""
-        return {
-            "item_ids": context["item_id"]
-        }
+        return {"item_ids": context["item_id"]}
 
     @property
     def query(self) -> str:
@@ -331,12 +324,12 @@ class ColumnValuesStream(MondayStream):
         ctx: dict = cast(dict, context)
         row["item_id"] = ctx["item_id"]
 
-        if(row["value"] is None):
+        if row["value"] is None:
             row["value"] = ""
         else:
             row["value"] = json.dumps(row["value"])
 
-        if(row["additional_info"] is None):
+        if row["additional_info"] is None:
             row["additional_info"] = ""
         else:
             row["additional_info"] = json.dumps(row["additional_info"])

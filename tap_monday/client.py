@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from singer_sdk.streams import GraphQLStream
 from singer_sdk.exceptions import FatalAPIError, RetriableAPIError
 
+
 class MondayStream(GraphQLStream):
     """Monday stream class."""
 
@@ -30,16 +31,18 @@ class MondayStream(GraphQLStream):
     ) -> Any:
         """Return the number of the next page."""
         self.logger.debug("get_next_page_token stream name: %s" % self.name)
-        if self.name == 'items':
+        if self.name == "items":
             limit_per_page = self.config["item_limit"]
-        elif self.name == 'boards':
+        elif self.name == "boards":
             limit_per_page = self.config["board_limit"]
         else:
-            return None 
+            return None
             # All other objects are queried by parent IDs without pagination
 
         self.logger.debug("get_next_page_token limit_per_page: %s" % limit_per_page)
-        self.logger.debug("get_next_page_token data len: %s" % len(response.json()["data"][self.name]))
+        self.logger.debug(
+            "get_next_page_token data len: %s" % len(response.json()["data"][self.name])
+        )
         self.logger.debug("get_next_page_token previous_token: %s" % previous_token)
         current_page = previous_token if previous_token is not None else 1
         self.logger.debug("get_next_page_token current_page: %s" % current_page)
@@ -56,23 +59,14 @@ class MondayStream(GraphQLStream):
         Gracefully handles rate limits.
 
         """
-        if response.status_code == 429: # Rate limit error
-            msg = (
-                f"{response.status_code} Server Error: "
-                f"{response.reason}"
-            )
+        if response.status_code == 429:  # Rate limit error
+            msg = f"{response.status_code} Server Error: " f"{response.reason}"
             raise RetriableAPIError(msg)
         elif 400 <= response.status_code < 500:
-            msg = (
-                f"{response.status_code} Client Error: "
-                f"{response.reason}"
-            )
+            msg = f"{response.status_code} Client Error: " f"{response.reason}"
             raise FatalAPIError(msg)
         elif 500 <= response.status_code < 600:
-            msg = (
-                f"{response.status_code} Server Error: "
-                f"{response.reason}"
-            )
+            msg = f"{response.status_code} Server Error: " f"{response.reason}"
             raise RetriableAPIError(msg)
 
     def request_decorator(self, func: Callable) -> Callable:
@@ -86,7 +80,7 @@ class MondayStream(GraphQLStream):
             max_tries=5,
             on_backoff=self.backoff_handler,
             jitter=None,
-            interval=70
+            interval=70,
         )(func)
         return decorator
 

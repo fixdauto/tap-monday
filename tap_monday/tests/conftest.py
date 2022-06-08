@@ -2,6 +2,7 @@
 
 import pytest
 
+
 @pytest.fixture
 def fixture_boards():
     """Emulate Monday.com boards query."""
@@ -24,7 +25,7 @@ def fixture_boards():
                         "name": "Main",
                         "kind": None,
                         "description": None,
-                    }
+                    },
                 }
             ]
         }
@@ -46,7 +47,7 @@ def fixture_boards_some_empty():
                     "owner": {
                         "id": 21226602,
                         "name": "Bat Man",
-                        "email": "batman@batman.com"
+                        "email": "batman@batman.com",
                     },
                     "workspace": None,
                 }
@@ -72,7 +73,7 @@ def fixture_groups():
                             "archived": False,
                             "deleted": False,
                         }
-                    ]
+                    ],
                 }
             ]
         }
@@ -111,6 +112,7 @@ def fixture_items():
             ],
         }
     }
+
 
 @pytest.fixture
 def fixture_items_some_empty():
