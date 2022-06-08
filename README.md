@@ -111,11 +111,11 @@ poetry run tap-monday --config ../tap-monday-config.json
 
 Test and lint before committing. It should pass MyPy, Black, Falke8 and PyDocStyle.
 ```
-poetry run pytest
+poetry run pydocstyle tap_monday
 poetry run mypy tap_monday
 poetry run black
 poetry run flake8 tap_monday
-poetry run pydocstyle tap_monday
+poetry run pytest
 ```
 
 ## Limitations
