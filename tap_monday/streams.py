@@ -100,8 +100,9 @@ class GroupsStream(MondayStream):
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
         """Get board_ids from the context."""
+        ctx: dict = cast(dict, context)
         return {
-            "board_ids": context["board_id"],
+            "board_ids": ctx["board_id"],
         }
 
     @property
@@ -235,8 +236,9 @@ class ColumnsStream(MondayStream):
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
         """Get board_ids from the context."""
+        ctx: dict = cast(dict, context)
         return {
-            "board_ids": context["board_id"],
+            "board_ids": ctx["board_id"],
         }
 
     @property
@@ -291,7 +293,10 @@ class ColumnValuesStream(MondayStream):
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
         """Get item_id from the context."""
-        return {"item_ids": context["item_id"]}
+        ctx: dict = cast(dict, context)
+        return {
+            "item_ids": ctx["item_id"]
+        }
 
     @property
     def query(self) -> str:
