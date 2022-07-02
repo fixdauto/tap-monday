@@ -62,14 +62,14 @@ plugins:
       description: Maximum number of boards to return per page/query.
     - name: item_limit
       kind: integer
-      value: 200
+      value: 500
       label: Maximum number of items to return per page/query
-      description: Maximum number of items to return per page/query. Item queries are limited to 1 per 2 minutes.
+      description: Maximum number of items to return per page/query. Per documentation, Item queries are limited to 1 per 2 minutes. It's possible to make them faster if they are not run back-to-back. It can be achieved setting max_batch_rows to a value less than item_limit causes Meltano to spend some time inserting values in a database and slow down query rate enough to avoid hitting rate limits.
     - name: column_value_limit
       kind: integer
       value: 200
       label: Maximum number of items to return per page/query in column value query
-      description: Column values is a child object of items. So this value limits number of items per page while query is going to return all the column values for the items. It works fine with the same value as item_limit.
+      description: Column values is a child object of items. So this value limits number of items per page while query is going to return all the column values for the items. The same rules apply here as for the item_limit.
     select:
     - boards.*
     - items.*
@@ -96,9 +96,8 @@ loaders:
     config:
 ...
       max_batch_rows: 250
-      max_buffer_size: 32768
 ```
-Also low batch rows and buffer size values work well with low rate limits because meltano spends some time inserting values between API calls.
+Low max_batch_rows work well with low rate limits because Meltano spends some time inserting values between API calls.
 
 
 ## When you change the code
