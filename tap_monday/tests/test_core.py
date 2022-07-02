@@ -28,10 +28,11 @@ def test_tap_standard(
         "POST",
         SAMPLE_CONFIG["api_url"],
         [
+            # These lines should be in exact order tap code makes requests
             {"json": fixture_boards, "status_code": 200},
             {"json": fixture_columns, "status_code": 200},
-            {"json": fixture_items, "status_code": 200},
             {"json": fixture_column_values, "status_code": 200},
+            {"json": fixture_items, "status_code": 200},
             {"json": fixture_groups, "status_code": 200},
         ],
     )
@@ -152,8 +153,7 @@ def test_column_values_parsing(fixture_column_values):
     tap = TapMonday(config=SAMPLE_CONFIG)
     stream = ColumnValuesStream(tap=tap)
     processed_row = stream.post_process(
-        fixture_column_values["data"]["items"][0]["column_values"][0],
-        {"item_id": fixture_column_values["data"]["items"][0]["id"]},
+        fixture_column_values["data"]["items"][0]["column_values"][0]
     )
 
     assert processed_row["item_id"] == 2274512428
@@ -181,8 +181,7 @@ def test_column_values_parsing_empty_values(fixture_column_values_some_empty):
     tap = TapMonday(config=SAMPLE_CONFIG)
     stream = ColumnValuesStream(tap=tap)
     processed_row = stream.post_process(
-        fixture_column_values_some_empty["data"]["items"][0]["column_values"][0],
-        {"item_id": fixture_column_values_some_empty["data"]["items"][0]["id"]},
+        fixture_column_values_some_empty["data"]["items"][0]["column_values"][0]
     )
 
     assert processed_row["item_id"] == 2274512428

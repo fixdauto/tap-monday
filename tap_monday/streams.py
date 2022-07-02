@@ -149,7 +149,10 @@ class ItemsStream(MondayStream):
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
         """Set pagination and limit."""
-        return {"page": next_page_token or 1, "item_limit": self.config["item_limit"]}
+        return {
+            "page": next_page_token or 1,
+            "item_limit": self.config["item_limit"],
+        }
 
     @property
     def query(self) -> str:
@@ -185,12 +188,6 @@ class ItemsStream(MondayStream):
                 }
             }
         """
-
-    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
-        """Allow ColumnValuesStream to query by item_id."""
-        return {
-            "item_id": record["id"],
-        }
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Add and convert fields."""
@@ -285,22 +282,25 @@ class ColumnValuesStream(MondayStream):
     primary_keys = ["id", "item_id"]
     replication_key = None
 
-    parent_stream_type = ItemsStream
-    ignore_parent_replication_keys = True
-
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
-        """Get item_id from the context."""
-        ctx: dict = cast(dict, context)
-        return {"item_ids": ctx["item_id"]}
+        """Set pagination and limit."""
+        return {
+            "page": next_page_token or 1,
+            "column_value_limit": self.config["column_value_limit"],
+        }
 
     @property
     def query(self) -> str:
         """Form ColumnValues query."""
         return """
-            query ColumnValues($item_ids: [Int]) {
-                items (ids: $item_ids) {
+            query ColumnValues($column_value_limit: Int!, $page: Int!) {
+                items(
+                    limit: $column_value_limit,
+                    page: $page,
+                    newest_first: true
+                ) {
                     id
                     column_values {
                         id
@@ -319,12 +319,12 @@ class ColumnValuesStream(MondayStream):
         resp_json = response.json()
         for row in resp_json["data"]["items"]:
             for column_value in row["column_values"]:
+                column_value["item_id"] = row["id"]
                 yield column_value
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Convert types."""
-        ctx: dict = cast(dict, context)
-        row["item_id"] = ctx["item_id"]
+        row["item_id"] = int(row["item_id"])
 
         if row["value"] is None:
             row["value"] = ""

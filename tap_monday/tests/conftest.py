@@ -5,7 +5,7 @@ import pytest
 
 @pytest.fixture
 def fixture_boards():
-    """Emulate Monday.com boards query."""
+    """Emulate Monday.com boards query response."""
     return {
         "data": {
             "boards": [
@@ -34,7 +34,7 @@ def fixture_boards():
 
 @pytest.fixture
 def fixture_boards_some_empty():
-    """Emulate Monday.com boards query with some empty values."""
+    """Emulate Monday.com boards query response with some empty values."""
     return {
         "data": {
             "boards": [
@@ -58,7 +58,7 @@ def fixture_boards_some_empty():
 
 @pytest.fixture
 def fixture_groups():
-    """Emulate Monday.com groups query."""
+    """Emulate Monday.com groups query response."""
     return {
         "data": {
             "boards": [
@@ -82,7 +82,7 @@ def fixture_groups():
 
 @pytest.fixture
 def fixture_items():
-    """Emulate Monday.com items query."""
+    """Emulate Monday.com items query response."""
     return {
         "data": {
             "items": [
@@ -116,7 +116,7 @@ def fixture_items():
 
 @pytest.fixture
 def fixture_items_some_empty():
-    """Emulate Monday.com items query with some empty values."""
+    """Emulate Monday.com items query response with some empty values."""
     return {
         "data": {
             "items": [
@@ -145,7 +145,7 @@ def fixture_items_some_empty():
 
 @pytest.fixture
 def fixture_columns():
-    """Emulate Monday.com columns query."""
+    """Emulate Monday.com columns query response."""
     return {
         "data": {
             "boards": [
@@ -170,12 +170,12 @@ def fixture_columns():
 
 @pytest.fixture
 def fixture_column_values():
-    """Emulate Monday.com column values query."""
+    """Emulate Monday.com column values query response."""
     return {
         "data": {
             "items": [
                 {
-                    "id": 2274512428,
+                    "id": "2274512428",
                     "column_values": [
                         {
                             "id": "status",
@@ -192,6 +192,7 @@ def fixture_column_values():
                             '"color":"#00c875",'
                             '"changed_at":"2022-04-14T19:07:18.872Z"'
                             "}",
+                            "item_id":"2274512428"
                         }
                     ],
                 }
@@ -202,12 +203,12 @@ def fixture_column_values():
 
 @pytest.fixture
 def fixture_column_values_some_empty():
-    """Emulate Monday.com column values query with some empty values."""
+    """Emulate Monday.com column values query response with some empty values."""
     return {
         "data": {
             "items": [
                 {
-                    "id": 2274512428,
+                    "id": "2274512428",
                     "column_values": [
                         {
                             "id": "status",
@@ -216,6 +217,7 @@ def fixture_column_values_some_empty():
                             "value": None,
                             "text": "Done",
                             "additional_info": None,
+                            "item_id":"2274512428"
                         }
                     ],
                 }

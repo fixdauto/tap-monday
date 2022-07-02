@@ -52,6 +52,12 @@ class TapMonday(Tap):
             default=10,
             description="Amount of items to request per page",
         ),
+        th.Property(
+            "column_value_limit",
+            th.NumberType,
+            default=10,
+            description="Amount of items to request per page for column values",
+        ),
     ).to_dict()
 
     def discover_streams(self) -> List[Stream]:
