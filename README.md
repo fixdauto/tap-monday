@@ -48,8 +48,7 @@ plugins:
       kind: password
       label: Authentication Token
       documentation: https://support.monday.com/hc/en-us/articles/360005144659-Does-monday-com-have-an-API-
-      decription: Authentication token you should generate in your monday.com acccunt.
-        Look under Admin setting.
+      description: Authentication token you should generate in your Monday.com account. Look under the Admin settings.
     - name: api_url
       kind: string
       value: https://api.monday.com/v2
