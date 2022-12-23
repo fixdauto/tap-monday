@@ -44,7 +44,7 @@ plugins:
     - catalog
     settings:
     - name: auth_token
-      env: MONDAY_AUTH_TOKEN
+      env: TAP_MONDAY_AUTH_TOKEN
       kind: password
       label: Authentication Token
       documentation: https://support.monday.com/hc/en-us/articles/360005144659-Does-monday-com-have-an-API-
