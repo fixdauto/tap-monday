@@ -94,7 +94,9 @@ def test_group_parsing(fixture_groups):
 def test_items_parsing(fixture_items):
     tap = TapMonday(config=SAMPLE_CONFIG)
     stream = ItemsStream(tap=tap)
-    processed_row = stream.post_process(fixture_items["data"]["items"][0])
+    processed_row = stream.post_process(
+        fixture_items["data"]["boards"][0]["items"][0], {"board_id": 2389168662}
+    )
 
     assert processed_row["board_id"] == 2389168662
     assert processed_row["name"] == "My item name"
@@ -105,16 +107,16 @@ def test_items_parsing(fixture_items):
     assert processed_row["creator_name"] == "Bat Man"
     assert processed_row["state"] == "active"
     assert processed_row["parent_item_id"] == 2274512420
-    assert processed_row["board_id"] == 2389168662
-    assert processed_row["board_name"] == "My board"
     assert processed_row["group_id"] == "new_group8875"
-    assert processed_row["group_title"] == "My group name"
 
 
 def test_items_parsing_empty_values(fixture_items_some_empty):
     tap = TapMonday(config=SAMPLE_CONFIG)
     stream = ItemsStream(tap=tap)
-    processed_row = stream.post_process(fixture_items_some_empty["data"]["items"][0])
+    processed_row = stream.post_process(
+        fixture_items_some_empty["data"]["boards"][0]["items"][0],
+        {"board_id": 2389168662},
+    )
 
     assert processed_row["id"] == 2274512428
     assert processed_row["name"] == "My item name"
@@ -126,9 +128,7 @@ def test_items_parsing_empty_values(fixture_items_some_empty):
     assert processed_row["state"] == "active"
     assert processed_row["parent_item_id"] == 0
     assert processed_row["board_id"] == 2389168662
-    assert processed_row["board_name"] == "My board"
     assert processed_row["group_id"] == "new_group8875"
-    assert processed_row["group_title"] == "My group name"
 
 
 def test_columns_parsing(fixture_columns):
@@ -153,7 +153,8 @@ def test_column_values_parsing(fixture_column_values):
     tap = TapMonday(config=SAMPLE_CONFIG)
     stream = ColumnValuesStream(tap=tap)
     processed_row = stream.post_process(
-        fixture_column_values["data"]["items"][0]["column_values"][0]
+        fixture_column_values["data"]["items"][0]["column_values"][0],
+        {"item_id": 2274512428},
     )
 
     assert processed_row["item_id"] == 2274512428
@@ -181,7 +182,8 @@ def test_column_values_parsing_empty_values(fixture_column_values_some_empty):
     tap = TapMonday(config=SAMPLE_CONFIG)
     stream = ColumnValuesStream(tap=tap)
     processed_row = stream.post_process(
-        fixture_column_values_some_empty["data"]["items"][0]["column_values"][0]
+        fixture_column_values_some_empty["data"]["items"][0]["column_values"][0],
+        {"item_id": 2274512428},
     )
 
     assert processed_row["item_id"] == 2274512428

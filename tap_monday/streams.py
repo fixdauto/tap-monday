@@ -59,7 +59,7 @@ class BoardsStream(MondayStream):
         """
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
-        """Allow GroupsStream to query by board_id."""
+        """Allow GroupsStream and ItemsStream to query by board_id."""
         return {"board_id": record["id"]}
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
@@ -116,6 +116,7 @@ class GroupsStream(MondayStream):
                         title
                         position
                         color
+                        deleted
                     }
                 }
             }
@@ -131,8 +132,8 @@ class GroupsStream(MondayStream):
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Convert types."""
         ctx: dict = cast(dict, context)
-        row["position"] = float(row["position"])
         row["board_id"] = ctx["board_id"]
+        row["position"] = float(row["position"])
         row["tapped_at"] = self.tapped_at()
         return row
 
@@ -142,69 +143,71 @@ class ItemsStream(MondayStream):
 
     name = "items"
     schema_filepath = SCHEMAS_DIR / "items.json"
+
     primary_keys = ["id"]
     replication_key = "updated_at"
+
+    parent_stream_type = BoardsStream
+    ignore_parent_replication_keys = True
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
-        """Set pagination and limit."""
+        """Get board_ids from the context."""
+        ctx: dict = cast(dict, context)
         return {
-            "page": next_page_token or 1,
-            "item_limit": self.config["item_limit"],
+            "board_ids": ctx["board_id"],
         }
 
     @property
     def query(self) -> str:
         """Form Items query."""
         return """
-            query Items($item_limit: Int!, $page: Int!) {
-                items(
-                    limit: $item_limit,
-                    page: $page,
-                    newest_first: true
-                ) {
+            query Items($board_ids: [Int]) {
+                boards(ids: $board_ids) {
                     id
-                    name
-                    state
-                    created_at
-                    updated_at
-                    creator_id
-                    creator {
-                        email
-                        name
-                    }
-                    board {
+                    items {
                         id
                         name
-                    }
-                    group {
-                        id
-                        title
-                    }
-                    parent_item {
-                        id
+                        state
+                        created_at
+                        updated_at
+                        creator_id
+                        creator {
+                            email
+                            name
+                        }
+                        group {
+                            id
+                        }
+                        parent_item {
+                            id
+                        }
                     }
                 }
             }
         """
 
+    def parse_response(self, response: requests.Response) -> Iterable[dict]:
+        """Parse groups response."""
+        resp_json = response.json()
+        for row in resp_json["data"]["boards"]:
+            for item in row["items"]:
+                yield item
+
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Add and convert fields."""
         row["id"] = int(row["id"])
-        row["creator_id"] = int(row["creator_id"])
 
-        board = row.pop("board")
-        row["board_id"] = int(board["id"])
-        row["board_name"] = board["name"]
+        ctx: dict = cast(dict, context)
+        row["board_id"] = ctx["board_id"]
 
-        group = row.pop("group")
-        row["group_id"] = group["id"]
-        row["group_title"] = group["title"]
+        row["group_id"] = row["group"]["id"]
 
         parent_item = row.pop("parent_item")
         row["parent_item_id"] = 0 if parent_item is None else int(parent_item["id"])
 
+        row["creator_id"] = int(row["creator_id"])
         creator = row.pop("creator")
         if creator is not None:
             row["creator_email"] = creator["email"]
@@ -215,6 +218,10 @@ class ItemsStream(MondayStream):
 
         row["tapped_at"] = self.tapped_at()
         return row
+
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Allow ColumnValuesStream to query by item_id."""
+        return {"item_id": int(record["id"])}
 
 
 class ColumnsStream(MondayStream):
@@ -282,25 +289,24 @@ class ColumnValuesStream(MondayStream):
     primary_keys = ["id", "item_id"]
     replication_key = None
 
+    parent_stream_type = ItemsStream
+    ignore_parent_replication_keys = True
+
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
-        """Set pagination and limit."""
+        """Get board_ids from the context."""
+        ctx: dict = cast(dict, context)
         return {
-            "page": next_page_token or 1,
-            "column_value_limit": self.config["column_value_limit"],
+            "item_ids": ctx["item_id"],
         }
 
     @property
     def query(self) -> str:
         """Form ColumnValues query."""
         return """
-            query ColumnValues($column_value_limit: Int!, $page: Int!) {
-                items(
-                    limit: $column_value_limit,
-                    page: $page,
-                    newest_first: true
-                ) {
+            query ColumnValues($item_ids: [Int]) {
+                items(ids: $item_ids) {
                     id
                     column_values {
                         id
@@ -309,6 +315,7 @@ class ColumnValuesStream(MondayStream):
                         type
                         value
                         additional_info
+                        description
                     }
                 }
             }
@@ -319,12 +326,12 @@ class ColumnValuesStream(MondayStream):
         resp_json = response.json()
         for row in resp_json["data"]["items"]:
             for column_value in row["column_values"]:
-                column_value["item_id"] = row["id"]
                 yield column_value
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> dict:
         """Convert types."""
-        row["item_id"] = int(row["item_id"])
+        ctx: dict = cast(dict, context)
+        row["item_id"] = ctx["item_id"]
 
         if row["value"] is None:
             row["value"] = ""

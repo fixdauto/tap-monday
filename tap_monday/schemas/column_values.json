@@ -19,6 +19,9 @@
     "additional_info": {
       "type": "string"
     },
+    "description": {
+      "type": ["string", "null"]
+    },
     "item_id": {
       "type": "integer"
     },

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tap-monday"
-version = "0.1.49"
+version = "0.1.57"
 description = "`tap-monday` is a Singer tap for Monday.com, built with the Meltano Singer SDK."
 authors = ["Maksim Sundukov"]
 keywords = [

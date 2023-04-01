@@ -19,14 +19,8 @@
     "group_id": {
       "type": "string"
     },
-    "group_title": {
-      "type": "string"
-    },
     "board_id": {
       "type": "integer"
-    },
-    "board_name": {
-      "type": "string"
     },
     "state": {
       "type": "string"

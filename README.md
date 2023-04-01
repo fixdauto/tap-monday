@@ -21,8 +21,6 @@ meltano elt tap-monday your-target
   "api_url": "https://api.monday.com/v2",
   "auth_token": "yourauthenticationtoken",
   "board_limit": 10, # limit per page
-  "item_limit": 10, # limit per page
-  "column_value_limit": 10 # limit per page for items, then the tap grabs all the column values for the selected items
 }
 ```
 
@@ -59,16 +57,6 @@ plugins:
       value: 50
       label: Maximum number of boards to return per page/query
       description: Maximum number of boards to return per page/query.
-    - name: item_limit
-      kind: integer
-      value: 500
-      label: Maximum number of items to return per page/query
-      description: Maximum number of items to return per page/query. Per documentation, Item queries are limited to 1 per 2 minutes. It's possible to make them faster if they are not run back-to-back. It can be achieved setting max_batch_rows to a value less than item_limit causes Meltano to spend some time inserting values in a database and slow down query rate enough to avoid hitting rate limits.
-    - name: column_value_limit
-      kind: integer
-      value: 200
-      label: Maximum number of items to return per page/query in column value query
-      description: Column values is a child object of items. So this value limits number of items per page while query is going to return all the column values for the items. The same rules apply here as for the item_limit.
     select:
     - boards.*
     - items.*

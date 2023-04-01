@@ -35,13 +35,8 @@ class MondayStream(GraphQLStream):
         self.logger.debug("get_next_page_token stream name: %s" % self.name)
 
         name_for_limit = self.name
-        if self.name == "items":
-            limit_per_page = self.config["item_limit"]
-        elif self.name == "boards":
+        if self.name == "boards":
             limit_per_page = self.config["board_limit"]
-        elif self.name == "column_values":
-            limit_per_page = self.config["column_value_limit"]
-            name_for_limit = "items"
         else:
             return None
             # All other objects are queried by parent IDs without pagination

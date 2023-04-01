@@ -27,7 +27,7 @@ def fixture_boards():
                         "description": None,
                     },
                 }
-            ]
+            ],
         }
     }
 
@@ -51,7 +51,7 @@ def fixture_boards_some_empty():
                     },
                     "workspace": None,
                 }
-            ]
+            ],
         }
     }
 
@@ -75,7 +75,7 @@ def fixture_groups():
                         }
                     ],
                 }
-            ]
+            ],
         }
     }
 
@@ -85,29 +85,29 @@ def fixture_items():
     """Emulate Monday.com items query response."""
     return {
         "data": {
-            "items": [
+            "boards": [
                 {
-                    "id": 2274512428,
-                    "name": "My item name",
-                    "created_at": "2021-10-06T14:31:02Z",
-                    "updated_at": "2021-10-07T14:31:02Z",
-                    "creator_id": 21226602,
-                    "creator": {
-                        "email": "batman@batman.com",
-                        "name": "Bat Man",
-                    },
-                    "state": "active",
-                    "parent_item": {
-                        "id": 2274512420,
-                    },
-                    "board": {
-                        "id": "2389168662",
-                        "name": "My board",
-                    },
-                    "group": {
-                        "title": "My group name",
-                        "id": "new_group8875",
-                    },
+                    "id": "2389168662",
+                    "items": [
+                        {
+                            "id": 2274512428,
+                            "name": "My item name",
+                            "created_at": "2021-10-06T14:31:02Z",
+                            "updated_at": "2021-10-07T14:31:02Z",
+                            "creator_id": 21226602,
+                            "creator": {
+                                "email": "batman@batman.com",
+                                "name": "Bat Man",
+                            },
+                            "state": "active",
+                            "parent_item": {
+                                "id": 2274512420,
+                            },
+                            "group": {
+                                "id": "new_group8875",
+                            },
+                        }
+                    ],
                 }
             ],
         }
@@ -119,24 +119,25 @@ def fixture_items_some_empty():
     """Emulate Monday.com items query response with some empty values."""
     return {
         "data": {
-            "items": [
+            "boards": [
                 {
-                    "id": 2274512428,
-                    "name": "My item name",
-                    "created_at": "2021-10-06T14:31:02Z",
-                    "updated_at": "2021-10-07T14:31:02Z",
-                    "creator_id": 0,
-                    "creator": None,
-                    "state": "active",
-                    "parent_item": None,
-                    "board": {
-                        "id": "2389168662",
-                        "name": "My board",
-                    },
-                    "group": {
-                        "title": "My group name",
-                        "id": "new_group8875",
-                    },
+                    "id": "2389168662",
+                    "items": [
+                        {
+                            "id": 2274512428,
+                            "name": "My item name",
+                            "created_at": "2021-10-06T14:31:02Z",
+                            "updated_at": "2021-10-07T14:31:02Z",
+                            "creator_id": 0,
+                            "creator": None,
+                            "state": "active",
+                            "parent_item": None,
+                            "group": {
+                                "title": "My group name",
+                                "id": "new_group8875",
+                            },
+                        }
+                    ],
                 }
             ],
         }
@@ -192,7 +193,8 @@ def fixture_column_values():
                             '"color":"#00c875",'
                             '"changed_at":"2022-04-14T19:07:18.872Z"'
                             "}",
-                            "item_id":"2274512428"
+                            "item_id": "2274512428",
+                            "description": None,
                         }
                     ],
                 }
@@ -217,7 +219,7 @@ def fixture_column_values_some_empty():
                             "value": None,
                             "text": "Done",
                             "additional_info": None,
-                            "item_id":"2274512428"
+                            "item_id": "2274512428",
                         }
                     ],
                 }
