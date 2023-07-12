@@ -26,18 +26,30 @@ class BoardsStream(MondayStream):
         return {
             "page": next_page_token or 1,
             "board_limit": self.config["board_limit"],
+            "board_ids": self.config.get("board_ids"),
         }
 
     @property
     def query(self) -> str:
         """Form Boards query."""
-        return """
-            query Boards($board_limit: Int!, $page: Int!) {
-                boards(
-                    limit: $board_limit,
-                    page: $page,
-                    order_by: created_at
-                ) {
+        board_ids = self.config.get("board_ids")
+        if board_ids and len(board_ids) > 0:
+            ql_string = """
+                query Boards($board_limit: Int!, $page: Int!, $board_ids:[Int]) {
+                    boards(
+                        ids: $board_ids,
+            """
+        else:
+            ql_string = """
+                query Boards($board_limit: Int!, $page: Int!) {
+                    boards(
+            """
+
+        ql_string += """
+                        limit: $board_limit,
+                        page: $page,
+                        order_by: created_at
+            ) {
                     id
                     name
                     description
@@ -57,6 +69,8 @@ class BoardsStream(MondayStream):
                 }
             }
         """
+
+        return ql_string
 
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Allow GroupsStream and ItemsStream to query by board_id."""

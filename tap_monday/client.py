@@ -32,8 +32,6 @@ class MondayStream(GraphQLStream):
         self, response: requests.Response, previous_token: Optional[Any]
     ) -> Any:
         """Return the number of the next page."""
-        self.logger.debug("get_next_page_token stream name: %s" % self.name)
-
         name_for_limit = self.name
         if self.name == "boards":
             limit_per_page = self.config["board_limit"]
@@ -41,21 +39,13 @@ class MondayStream(GraphQLStream):
             return None
             # All other objects are queried by parent IDs without pagination
 
-        self.logger.debug("get_next_page_token name_for_limit: %s" % name_for_limit)
-        self.logger.debug("get_next_page_token limit_per_page: %s" % limit_per_page)
-        self.logger.debug(
-            "get_next_page_token data len: %s"
-            % len(response.json()["data"][name_for_limit])
-        )
-        self.logger.debug("get_next_page_token previous_token: %s" % previous_token)
         current_page = previous_token if previous_token is not None else 1
-        self.logger.debug("get_next_page_token current_page: %s" % current_page)
 
         if len(response.json()["data"][name_for_limit]) == limit_per_page:
             next_page_token = current_page + 1
         else:
             next_page_token = None
-        self.logger.debug("get_next_page_token next_page_token: %s" % next_page_token)
+
         return next_page_token
 
     def validate_response(self, response: requests.Response) -> None:
@@ -66,6 +56,10 @@ class MondayStream(GraphQLStream):
         """
         if response.status_code == 429:  # Rate limit error
             msg = f"{response.status_code} Server Error: " f"{response.reason}"
+            raise RetriableAPIError(msg)
+        elif response.status_code == 104:  # Connection reset by peer
+            # Might be related to the rate limit or a random issue on their side
+            msg = f"{response.status_code} Error: " f"{response.reason}"
             raise RetriableAPIError(msg)
         elif 400 <= response.status_code < 500:
             msg = f"{response.status_code} Client Error: " f"{response.reason}"

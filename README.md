@@ -21,6 +21,7 @@ meltano elt tap-monday your-target
   "api_url": "https://api.monday.com/v2",
   "auth_token": "yourauthenticationtoken",
   "board_limit": 10, # limit per page
+  "board_ids": [1231231230, 3453453450] # optional, limit to specifics boards to speed up the process and reduce memory leaks
 }
 ```
 
@@ -57,6 +58,14 @@ plugins:
       value: 50
       label: Maximum number of boards to return per page/query
       description: Maximum number of boards to return per page/query.
+    - name: board_ids
+      kind: integer
+      value:
+        - 1231231230
+        - 3453453450
+        - 4564564560
+      label: Board IDs
+      description: Get only specific borads. Column Values dataset size depends on number of boards and might be disproportionally large even in a small organisation. That might cause memory leaks and long execution times.
     select:
     - boards.*
     - items.*
@@ -106,7 +115,7 @@ Test and lint before committing. It should pass MyPy, Black, Falke8 and PyDocSty
 ```
 poetry run pydocstyle tap_monday
 poetry run mypy tap_monday
-poetry run black
+poetry run black ./
 poetry run flake8 tap_monday
 poetry run pytest
 ```
