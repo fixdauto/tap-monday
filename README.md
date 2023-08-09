@@ -21,7 +21,8 @@ meltano elt tap-monday your-target
   "api_url": "https://api.monday.com/v2",
   "auth_token": "yourauthenticationtoken",
   "board_limit": 10, # limit per page
-  "board_ids": [1231231230, 3453453450] # optional, limit to specifics boards to speed up the process and reduce memory leaks
+  "board_ids": [1231231230, 3453453450] # optional, limit to specific boards to speed up the process and reduce memory leaks
+  # "board_ids": '1231231230' # is supported as well, handy when only need one board and passing the value via an env var
 }
 ```
 

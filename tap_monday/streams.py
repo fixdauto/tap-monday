@@ -4,7 +4,7 @@ import requests
 import json
 
 from pathlib import Path
-from typing import Any, Optional, Dict, Iterable, cast
+from typing import Any, Optional, Dict, Iterable, cast, List
 
 from tap_monday.client import MondayStream
 
@@ -19,6 +19,14 @@ class BoardsStream(MondayStream):
     primary_keys = ["id"]
     replication_key = "updated_at"  # ISO8601/RFC3339, example: 2022-01-07T15:56:08Z
 
+    def board_ids(self) -> Optional[List[int]]:
+        """Ensure that board_ids is a list of ints."""
+        board_ids = self.config.get("board_ids")
+        if board_ids and type(board_ids) is str:
+            return [int(board_ids)]
+
+        return board_ids
+
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
@@ -26,14 +34,13 @@ class BoardsStream(MondayStream):
         return {
             "page": next_page_token or 1,
             "board_limit": self.config["board_limit"],
-            "board_ids": self.config.get("board_ids"),
+            "board_ids": self.board_ids(),
         }
 
     @property
     def query(self) -> str:
         """Form Boards query."""
-        board_ids = self.config.get("board_ids")
-        if board_ids and len(board_ids) > 0:
+        if self.board_ids():
             ql_string = """
                 query Boards($board_limit: Int!, $page: Int!, $board_ids:[Int]) {
                     boards(
