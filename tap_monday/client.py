@@ -74,6 +74,7 @@ class MondayStream(GraphQLStream):
             backoff.constant,
             (
                 RetriableAPIError,
+                requests.exceptions.ConnectionError,
                 requests.exceptions.ReadTimeout,
             ),
             max_tries=5,

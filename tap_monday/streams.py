@@ -2,6 +2,7 @@
 
 import requests
 import json
+import re
 
 from pathlib import Path
 from typing import Any, Optional, Dict, Iterable, cast, List
@@ -21,11 +22,12 @@ class BoardsStream(MondayStream):
 
     def board_ids(self) -> Optional[List[int]]:
         """Ensure that board_ids is a list of ints."""
-        board_ids = self.config.get("board_ids")
-        if board_ids and type(board_ids) is str:
-            return [int(board_ids)]
+        board_ids_conf = self.config.get("board_ids")
+        if board_ids_conf and type(board_ids_conf) is str:
+            board_ids = list(map(int, re.split(r",\s*", board_ids_conf)))
+            return board_ids
 
-        return board_ids
+        return board_ids_conf
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -114,7 +116,7 @@ class GroupsStream(MondayStream):
     replication_key = None
 
     parent_stream_type = BoardsStream
-    ignore_parent_replication_keys = True
+    ignore_parent_replication_key = True
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -169,7 +171,7 @@ class ItemsStream(MondayStream):
     replication_key = "updated_at"
 
     parent_stream_type = BoardsStream
-    ignore_parent_replication_keys = True
+    ignore_parent_replication_key = True
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -254,7 +256,7 @@ class ColumnsStream(MondayStream):
     replication_key = None
 
     parent_stream_type = BoardsStream
-    ignore_parent_replication_keys = True
+    ignore_parent_replication_key = True
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -311,7 +313,7 @@ class ColumnValuesStream(MondayStream):
     replication_key = None
 
     parent_stream_type = ItemsStream
-    ignore_parent_replication_keys = True
+    ignore_parent_replication_key = True
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
